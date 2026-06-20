@@ -290,8 +290,6 @@ function setupEventListeners() {
     currentVocals = e.target.value;
   });
 
-  document.getElementById('refresh-btn').addEventListener('click', fetchSongs);
-
   document.getElementById('surprise-btn').addEventListener('click', () => {
     surpriseMode = true;
     fetchSongs();
@@ -337,8 +335,6 @@ async function fetchReplacement() {
 
 async function fetchSongs() {
   try {
-    document.getElementById('refresh-btn').disabled = true;
-    document.getElementById('refresh-btn').textContent = 'Loading...';
 
     currentSpotifyToken = await getValidSpotifyToken();
     let response = await requestSongs(currentSpotifyToken);
@@ -376,8 +372,6 @@ async function fetchSongs() {
     console.error('Error fetching songs:', error);
     showError('Network error: ' + esc(error.message));
   } finally {
-    document.getElementById('refresh-btn').disabled = false;
-    document.getElementById('refresh-btn').textContent = 'Get Songs';
   }
 }
 
