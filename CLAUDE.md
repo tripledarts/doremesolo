@@ -78,6 +78,8 @@ This repo uses a **local** git identity (do not change global):
 
 `.env` is gitignored and holds real secrets — never commit it. `.env.example` is the committed template.
 
+**Workflow:** After every set of changes, commit AND push to `origin master` immediately. Do not leave commits sitting local.
+
 ## User preferences
 - Not deeply experienced with GitHub/IDEs/deployment — give explicit step-by-step instructions.
 - Wants fixes applied, not just error messages echoed back.
