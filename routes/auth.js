@@ -11,7 +11,7 @@ const STRAVA_TOKEN_URL = 'https://www.strava.com/api/v3/oauth/token';
 router.get('/spotify/login', (req, res) => {
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
-  const scopes = ['streaming', 'user-read-private', 'user-read-email'];
+  const scopes = ['streaming', 'user-read-private', 'user-read-email', 'user-library-read', 'user-read-playback-state'];
 
   const authUrl = `${SPOTIFY_AUTH_URL}?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}`;
 

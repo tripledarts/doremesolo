@@ -3,6 +3,10 @@ let currentPace = 120;
 let currentMood = 'happy';
 let currentVocals = 'combo';
 let surpriseMode = false;
+let mockWorkoutActive = false;
+let workoutStartTime = null;
+let paceReadings = [];
+let playlistStarted = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,22 +21,46 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = '/auth/spotify/login';
     });
   }
+
+  // Logout button
+  document.getElementById('spotify-logout-btn').addEventListener('click', () => {
+    localStorage.removeItem('spotify_token');
+    window.location.reload();
+  });
 });
 
 function showApp() {
   document.getElementById('auth-status').style.display = 'none';
+  document.getElementById('user-connected').style.display = 'block';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('user-info').textContent = '✓ Connected';
 }
 
 function setupEventListeners() {
-  // Pace slider
-  const paceInput = document.getElementById('pace-input');
-  paceInput.addEventListener('input', (e) => {
-    currentPace = e.target.value;
-    document.getElementById('pace-display').textContent = currentPace;
-    document.getElementById('current-bpm').textContent = `BPM: ${currentPace}`;
+  // Workout button
+  document.getElementById('workout-btn').addEventListener('click', () => {
+    mockWorkoutActive = !mockWorkoutActive;
+    const btn = document.getElementById('workout-btn');
+    const status = document.getElementById('workout-status');
+
+    if (mockWorkoutActive) {
+      workoutStartTime = Date.now();
+      playlistStarted = false;
+      paceReadings = [];
+      btn.textContent = '⏸️ Stop Workout';
+      btn.style.backgroundColor = '#ff6b6b';
+      status.textContent = '🔴 Collecting pace data (30s)...';
+      status.style.color = '#ff6b6b';
+      simulatePaceUpdates();
+    } else {
+      mockWorkoutActive = false;
+      playlistStarted = false;
+      btn.textContent = '▶️ Start Mock Workout';
+      btn.style.backgroundColor = '';
+      status.textContent = 'Stopped';
+      status.style.color = '';
+    }
   });
+
 
   // Mood selector
   document.getElementById('mood-select').addEventListener('change', (e) => {
@@ -65,6 +93,13 @@ async function fetchSongs() {
 
     if (!response.ok) {
       const error = await response.json();
+      if (error.code === 'SPOTIFY_AUTH') {
+        // Token expired/invalid — stop the workout and prompt a reconnect.
+        mockWorkoutActive = false;
+        localStorage.removeItem('spotify_token');
+        showError(`${error.error} <a href="/auth/spotify/login">Reconnect Spotify</a>`);
+        return;
+      }
       showError(error.error || 'Unknown error');
       return;
     }
@@ -150,3 +185,84 @@ async function refreshRecentlyPlayed() {
 
 // Refresh recently played every 2 seconds
 setInterval(refreshRecentlyPlayed, 2000);
+
+// Collect BPM data for 30 seconds, then start playlist, then refresh every 15 seconds
+function simulatePaceUpdates() {
+  if (!mockWorkoutActive || !currentSpotifyToken) return;
+
+  fetch('/api/mock-pace')
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then(data => {
+      if (data.pace && data.pace > 0) {
+        currentPace = data.pace;
+        document.getElementById('pace-display').textContent = currentPace;
+        console.log(`📍 Pace: ${currentPace} BPM`);
+
+        const elapsed = Date.now() - workoutStartTime;
+
+        if (!playlistStarted && elapsed < 30000) {
+          // Still collecting data (first 30 seconds)
+          paceReadings.push(currentPace);
+          console.log(`📊 Collecting data... ${elapsed / 1000 | 0}s (${paceReadings.length} samples)`);
+        } else if (!playlistStarted && elapsed >= 30000) {
+          // 30 seconds reached - calculate average and start playlist
+          const avgPace = Math.round(paceReadings.reduce((a, b) => a + b, 0) / paceReadings.length);
+          console.log(`🎵 Starting playlist with avg pace: ${avgPace} BPM`);
+          currentPace = avgPace;
+          document.getElementById('pace-display').textContent = currentPace;
+          playlistStarted = true;
+          paceReadings = [];
+          fetchSongs();
+        } else if (playlistStarted) {
+          // Playlist running - refresh songs every 15 seconds
+          if (paceReadings.length === 0) {
+            paceReadings.push(currentPace);
+          }
+          if (elapsed % 15000 < 2000) {
+            // Queue next song every 15 seconds
+            const avgPace = Math.round(paceReadings.reduce((a, b) => a + b, 0) / paceReadings.length);
+            console.log(`🔄 Checking for next song (avg: ${avgPace} BPM)`);
+            fetchSongs();
+            paceReadings = [];
+          }
+        }
+      }
+    })
+    .catch(err => console.error('Pace update error:', err));
+}
+
+setInterval(simulatePaceUpdates, 2000);
+
+// Test function for Spotify (run in browser console: testSpotify())
+window.testSpotify = async function() {
+  const token = localStorage.getItem('spotify_token');
+  if (!token) {
+    console.error('❌ No Spotify token found. Log in first.');
+    return;
+  }
+
+  try {
+    console.log('🧪 Testing Spotify search with "Who\'s That Chick"...');
+    const response = await fetch('/api/test-spotify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      console.log(`✓ Spotify test passed! Found ${data.songs.length} songs:`);
+      data.songs.forEach(song => {
+        console.log(`  🎵 ${song.name} by ${song.artist}`);
+      });
+    } else {
+      console.error('❌ Test failed:', data.error);
+    }
+  } catch (error) {
+    console.error('❌ Test error:', error);
+  }
+};

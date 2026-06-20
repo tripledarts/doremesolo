@@ -16,6 +16,10 @@
         <span id="user-info">Not logged in</span>
         <button id="spotify-login-btn" class="btn">Login with Spotify</button>
       </div>
+      <div id="user-connected" style="display:none;">
+        <span id="user-connected-info">✓ Connected</span>
+        <button id="spotify-logout-btn" class="btn btn-secondary">Logout</button>
+      </div>
     </header>
 
     <!-- Main app (hidden until authenticated) -->
@@ -27,12 +31,16 @@
         <span id="steps-per-min">Steps/min: --</span>
       </div>
 
-      <!-- Pace input (for mock mode during dev) -->
+      <!-- Workout controls -->
       <section class="controls">
         <div class="control-group">
-          <label for="pace-input">Current Pace (BPM):</label>
-          <input type="range" id="pace-input" min="80" max="180" value="120" step="5">
-          <span id="pace-display">120</span>
+          <button id="workout-btn" class="btn btn-primary">▶️ Start Mock Workout</button>
+          <span id="workout-status">Not active</span>
+        </div>
+
+        <div class="control-group pace-display-section">
+          <div id="pace-display" class="pace-number">--</div>
+          <p class="pace-label">BPM</p>
         </div>
 
         <div class="control-group">
