@@ -30,6 +30,8 @@ let playerDeviceId = null;
 let spotifySDKReady = false;
 let lastPlayedTrack = null;
 let currentQueue = [];
+let lastSongPlaying = false; // true when we're on the final track in the queue
+let pendingFetch = false;    // prevents double auto-fetch when queue empties
 
 // Called by Spotify's SDK script once it finishes loading
 window.onSpotifyWebPlaybackSDKReady = () => {
@@ -80,10 +82,27 @@ function handlePlayerStateChange(state) {
   const track = state.track_window?.current_track;
   if (!track) return;
 
-  // Track changed → mark the previous one as played
+  const nextTracks = state.track_window?.next_tracks ?? [];
+
+  // Track changed → previous song was played or skipped
   if (lastPlayedTrack && lastPlayedTrack.id !== track.id) {
     markSongPlayed(lastPlayedTrack);
+    removeSongFromQueue(lastPlayedTrack.id);
+    lastSongPlaying = false;
   }
+
+  // Detect natural end of last song:
+  // Spotify resets position to 0 and pauses when the final track finishes
+  if (nextTracks.length === 0) {
+    if (!state.paused) {
+      lastSongPlaying = true;
+    } else if (lastSongPlaying && state.position === 0) {
+      markSongPlayed({ id: track.id, name: track.name, artist: track.artists?.[0]?.name, image_url: track.album?.images?.[0]?.url });
+      removeSongFromQueue(track.id);
+      lastSongPlaying = false;
+    }
+  }
+
   lastPlayedTrack = {
     id: track.id,
     name: track.name,
@@ -91,17 +110,26 @@ function handlePlayerStateChange(state) {
     image_url: track.album?.images?.[0]?.url
   };
 
-  // Highlight the currently playing card in the queue
-  updateNowPlayingDisplay(track.id, track.name, track.artists?.[0]?.name);
+  updateNowPlayingDisplay(track.id);
 
-  // Update pause/resume button label
   const pauseBtn = document.getElementById('pause-btn');
   if (pauseBtn) pauseBtn.textContent = state.paused ? '▶ Resume' : '⏸ Pause';
 
-  // Show controls bar
   document.getElementById('player-controls').style.display = 'block';
   const bar = document.getElementById('now-playing-text');
   if (bar) bar.textContent = `${track.name ?? ''} — ${track.artists?.[0]?.name ?? ''}`;
+}
+
+// Remove a played/skipped song from the Now Playing list and auto-fetch when empty
+function removeSongFromQueue(songId) {
+  currentQueue = currentQueue.filter(s => s.id !== songId);
+  renderQueue();
+  if (currentQueue.length === 0 && !pendingFetch) {
+    pendingFetch = true;
+    document.getElementById('playlist').innerHTML =
+      '<div class="placeholder">Fetching next songs...</div>';
+    fetchSongs().finally(() => { pendingFetch = false; });
+  }
 }
 
 function updateNowPlayingDisplay(trackId) {
@@ -157,19 +185,9 @@ window.pauseResume = async function () {
   state.paused ? spotifyPlayer.resume() : spotifyPlayer.pause();
 };
 
-window.nextSong = async function () {
+window.nextSong = function () {
   if (!spotifyPlayer) return;
-  // Mark current song as played before advancing
-  const state = await spotifyPlayer.getCurrentState();
-  const track = state?.track_window?.current_track;
-  if (track) {
-    await markSongPlayed({
-      id: track.id,
-      name: track.name,
-      artist: track.artists?.[0]?.name,
-      image_url: track.album?.images?.[0]?.url
-    });
-  }
+  // player_state_changed will fire on track change and handle marking as played
   spotifyPlayer.nextTrack();
 };
 
@@ -295,6 +313,33 @@ async function fetchSongs() {
   }
 }
 
+const PLACEHOLDER_IMG = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3C/svg%3E';
+
+function songCardHTML(song, isFirst) {
+  return `
+    <div class="song-card${isFirst ? ' now-playing' : ''}"
+         data-track-id="${esc(song.id)}"
+         data-track-name="${esc(song.name)}">
+      <img src="${safeUrl(song.image_url, PLACEHOLDER_IMG)}"
+           alt="${esc(song.name)}" class="song-image">
+      <div class="song-info">
+        <h3>${isFirst ? '▶ ' : ''}${esc(song.name)}</h3>
+        <p>${esc(song.artist)}</p>
+        <p><em>${esc(song.reason)}</em></p>
+        <div class="match-score">Match: ${esc(String(song.match_score))}%</div>
+      </div>
+      <div class="song-actions">
+        <a href="${safeUrl(song.spotify_url, '#')}" target="_blank" rel="noopener noreferrer" class="btn-link">Open in Spotify</a>
+      </div>
+    </div>`;
+}
+
+function renderQueue() {
+  const playlistDiv = document.getElementById('playlist');
+  if (!currentQueue.length) return;
+  playlistDiv.innerHTML = currentQueue.map((song, i) => songCardHTML(song, i === 0)).join('');
+}
+
 function displaySongs(songs) {
   const playlistDiv = document.getElementById('playlist');
 
@@ -303,27 +348,9 @@ function displaySongs(songs) {
     return;
   }
 
-  currentQueue = songs;
-
-  const placeholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3C/svg%3E';
-  playlistDiv.innerHTML = songs.map((song, i) => `
-    <div class="song-card${i === 0 ? ' now-playing' : ''}"
-         data-track-id="${esc(song.id)}"
-         data-track-name="${esc(song.name)}">
-      <img src="${safeUrl(song.image_url, placeholder)}"
-           alt="${esc(song.name)}" class="song-image">
-      <div class="song-info">
-        <h3>${i === 0 ? '▶ ' : ''}${esc(song.name)}</h3>
-        <p>${esc(song.artist)}</p>
-        <p><em>${esc(song.reason)}</em></p>
-        <div class="match-score">Match: ${esc(String(song.match_score))}%</div>
-      </div>
-      <div class="song-actions">
-        <a href="${safeUrl(song.spotify_url, '#')}" target="_blank" rel="noopener noreferrer" class="btn-link">Open in Spotify</a>
-      </div>
-    </div>
-  `).join('');
-
+  currentQueue = [...songs];
+  lastSongPlaying = false;
+  renderQueue();
   playQueue(songs);
 }
 
