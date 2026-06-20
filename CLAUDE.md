@@ -68,7 +68,7 @@ Design intent (per user): NO manual BPM input — pace is driven entirely by moc
 ## Current state / gotchas
 - ⚠️ **`/api/current-songs` is in TEMPORARY TEST MODE** — it ignores ranking and hard-returns "Who's That Chick" by Rihanna. Original logic is preserved in a comment block in `routes/api.js`. Restore it after Spotify search is verified working.
 - Spotify search had a 400 "Invalid limit" error — fixed by building the search URL with query string instead of axios `params`.
-- Mock pace was stuck at 80 BPM — pace conversion in `strava-mock.js` was adjusted; verify it actually varies. **Still stuck:** mock loader reports "range: 80-80 BPM, avg: 80" on boot — not yet fixed.
+- ✅ **RESOLVED: Mock pace now varies.** `strava-mock.js` maps z-score SPD data to BPM (range 84–116, avg 113). Confirmed working on boot and via `/api/mock-pace` polling.
 - ✅ **RESOLVED: "No songs found" was an expired Spotify token, not a search bug.** Spotify user access tokens expire after ~1 hour, and `auth.js` saves only `access_token` (discards `refresh_token`), so there's no refresh. An expired token → `401 Invalid access token` → previously swallowed by `searchSongs` as `[]` → misleading "No songs found". Search itself works fine with a valid token (verified via client-credentials token: 5 tracks). **Fix applied:** `searchSongs` now throws an error with `code: 'SPOTIFY_AUTH'` on 401/403; `/api/current-songs` returns `401 {code:'SPOTIFY_AUTH'}`; frontend `fetchSongs` clears the dead token and shows a "Reconnect Spotify" link. **Recovery for the demo: just re-login to Spotify to get a fresh token.** Follow-up DONE: refresh-token flow now implemented (see API decisions / `/auth/spotify/refresh`), so the token auto-renews instead of dying after ~1h.
 
 ## Git
