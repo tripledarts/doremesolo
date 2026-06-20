@@ -70,13 +70,17 @@ router.get('/current-songs', async (req, res) => {
     const vocalsKeyword = vocals === 'voiceless' ? ' instrumental' : '';
     const queryBase = `${mood}${vocalsKeyword}`;
 
-    // Use the surprise genre if set, otherwise fall back to pace zone genres
+    // Use the surprise genre if set, otherwise fall back to pace zone genres.
+    // In surprise mode use the genre as a plain keyword (no genre: prefix) so
+    // non-standard names like 'afrobeats', 'lo-fi', 'fado' still return results.
     const genresToSearch = surprise_genre ? [surprise_genre] : zone.genres;
-
-    // Search once per genre seed and merge results (Spotify /recommendations is unavailable
-    // without extended quota approval, so we use genre-tagged search queries instead)
     const searches = await Promise.all(
-      genresToSearch.map(genre => searchSongs(`genre:${genre} ${queryBase}`, token, 10))
+      genresToSearch.map(genre => {
+        const query = surprise_genre
+          ? `${genre} ${queryBase}`
+          : `genre:${genre} ${queryBase}`;
+        return searchSongs(query, token, 10);
+      })
     );
 
     const seen = new Set();
