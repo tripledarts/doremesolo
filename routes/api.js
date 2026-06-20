@@ -62,10 +62,15 @@ router.get('/current-songs', async (req, res) => {
   try {
     const zone = getPaceZone(bpmNum);
 
+    // Build the search query — append "instrumental" for voiceless preference so Spotify
+    // surfaces tracks that are labelled instrumental in their metadata/titles
+    const vocalsKeyword = vocals === 'voiceless' ? ' instrumental' : '';
+    const queryBase = `${mood}${vocalsKeyword}`;
+
     // Search once per genre seed and merge results (Spotify /recommendations is unavailable
     // without extended quota approval, so we use genre-tagged search queries instead)
     const searches = await Promise.all(
-      zone.genres.map(genre => searchSongs(`genre:${genre} ${mood}`, token, 10))
+      zone.genres.map(genre => searchSongs(`genre:${genre} ${queryBase}`, token, 10))
     );
 
     const seen = new Set();
