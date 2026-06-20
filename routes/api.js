@@ -74,8 +74,15 @@ router.get('/current-songs', async (req, res) => {
       return true;
     });
 
+    // If recommendations returned nothing (e.g. API tier restriction), fall back to text search
     if (!spotifySongs.length) {
-      return res.json({ songs: [], message: 'No songs found for this pace and mood' });
+      console.log('⚠️ Recommendations returned empty — falling back to text search');
+      const query = `${mood} ${zone.genres[0]}`;
+      const fallback = await searchSongs(query, token, 15);
+      if (!fallback.length) {
+        return res.json({ songs: [], message: 'No songs found for this pace and mood' });
+      }
+      fallback.forEach(t => spotifySongs.push(t));
     }
 
     // Gemini re-ranks by mood fit
