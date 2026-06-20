@@ -33,10 +33,45 @@ router.get('/spotify/callback', async (req, res) => {
       }
     });
 
-    const { access_token } = response.data;
-    res.redirect(`/index.html?spotify_token=${access_token}`);
+    const { access_token, refresh_token, expires_in } = response.data;
+    // Pass the refresh token + lifetime to the client so it can auto-renew the
+    // access token (which expires after ~1h) without forcing a re-login.
+    const params = new URLSearchParams({
+      spotify_token: access_token,
+      spotify_refresh: refresh_token || '',
+      spotify_expires_in: String(expires_in || 3600)
+    });
+    res.redirect(`/index.html?${params.toString()}`);
   } catch (error) {
     res.status(500).json({ error: 'Spotify auth failed', details: error.message });
+  }
+});
+
+// Spotify token refresh — exchanges a refresh_token for a fresh access_token.
+// The client_secret must stay server-side, so the browser calls this endpoint.
+router.get('/spotify/refresh', async (req, res) => {
+  const { refresh_token } = req.query;
+
+  if (!refresh_token) {
+    return res.status(400).json({ error: 'refresh_token required' });
+  }
+
+  try {
+    const response = await axios.post(SPOTIFY_TOKEN_URL, null, {
+      params: {
+        grant_type: 'refresh_token',
+        refresh_token,
+        client_id: process.env.SPOTIFY_CLIENT_ID,
+        client_secret: process.env.SPOTIFY_CLIENT_SECRET
+      }
+    });
+
+    // Spotify may or may not return a new refresh_token; pass through whatever it gives.
+    const { access_token, expires_in, refresh_token: new_refresh } = response.data;
+    res.json({ access_token, expires_in, refresh_token: new_refresh });
+  } catch (error) {
+    console.error('❌ Spotify token refresh failed:', error.response?.data || error.message);
+    res.status(401).json({ error: 'Token refresh failed', code: 'SPOTIFY_AUTH' });
   }
 });
 

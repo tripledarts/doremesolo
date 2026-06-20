@@ -10,3 +10,6 @@ build/
 
 # Raw Kaggle download — the extracted CSVs in mock-data/ are what the app uses
 mock-data/archive.zip
+
+# Playwright MCP scratch artifacts
+.playwright-mcp/

@@ -47,9 +47,13 @@ mock-data/         Kaggle "Sport Activity Dataset - MTS-5" CSVs (gitignored? NO 
 - `GET /api/recently-played`, `POST /api/song-played`
 - `POST /api/test-spotify` — debug-only Spotify search check
 
+### Auth endpoints (`routes/auth.js`)
+- `GET /auth/spotify/login` → `GET /auth/spotify/callback` — OAuth; callback redirects to `/index.html?spotify_token=&spotify_refresh=&spotify_expires_in=` (passes refresh token + lifetime to the client).
+- `GET /auth/spotify/refresh?refresh_token=` — exchanges a refresh token for a fresh access token (uses `client_secret`, so must be server-side). Returns `{access_token, expires_in, refresh_token?}`; `401 {code:'SPOTIFY_AUTH'}` if Spotify rejects it.
+
 ## API decisions
 - **Song ranking: Gemini API** (switched from Claude midway). Model `gemini-1.5-flash`. Auth via `?key=` query param. Key in `.env` as `GEMINI_API_KEY`.
-- **Songs: Spotify Web API**, user has Premium. Auth scopes in `routes/auth.js`. Docs: https://developer.spotify.com/documentation/web-api — note: this site does **not** serve an `llms.txt`/`llms-full.txt` (both checked 2026-06-20: `/llms.txt` returns the normal HTML page, `/llms-full.txt` is 404), so read the regular docs pages directly.
+- **Songs: Spotify Web API**, user has Premium. Auth scopes in `routes/auth.js`. **Token refresh implemented:** access tokens expire in ~1h; the client stores the `refresh_token`+expiry (in `localStorage` via `spotify-sdk.js`) and auto-renews — proactively before expiry (`getValidSpotifyToken`) and reactively on a 401 (one refresh + retry in `fetchSongs`) before prompting a reconnect. Docs: https://developer.spotify.com/documentation/web-api — note: this site does **not** serve an `llms.txt`/`llms-full.txt` (both checked 2026-06-20: `/llms.txt` returns the normal HTML page, `/llms-full.txt` is 404), so read the regular docs pages directly.
 - **Pace: mock data** from Kaggle (real Strava requires paid tier). `strava-mock.js` reads a "Running" activity from the CSVs and cycles its pace samples. Falls back to a synthetic sequence if CSVs missing.
 - **Hosting target: Vercel** (not yet deployed).
 
@@ -63,7 +67,7 @@ Design intent (per user): NO manual BPM input — pace is driven entirely by moc
 - ⚠️ **`/api/current-songs` is in TEMPORARY TEST MODE** — it ignores ranking and hard-returns "Who's That Chick" by Rihanna. Original logic is preserved in a comment block in `routes/api.js`. Restore it after Spotify search is verified working.
 - Spotify search had a 400 "Invalid limit" error — fixed by building the search URL with query string instead of axios `params`.
 - Mock pace was stuck at 80 BPM — pace conversion in `strava-mock.js` was adjusted; verify it actually varies. **Still stuck:** mock loader reports "range: 80-80 BPM, avg: 80" on boot — not yet fixed.
-- ✅ **RESOLVED: "No songs found" was an expired Spotify token, not a search bug.** Spotify user access tokens expire after ~1 hour, and `auth.js` saves only `access_token` (discards `refresh_token`), so there's no refresh. An expired token → `401 Invalid access token` → previously swallowed by `searchSongs` as `[]` → misleading "No songs found". Search itself works fine with a valid token (verified via client-credentials token: 5 tracks). **Fix applied:** `searchSongs` now throws an error with `code: 'SPOTIFY_AUTH'` on 401/403; `/api/current-songs` returns `401 {code:'SPOTIFY_AUTH'}`; frontend `fetchSongs` clears the dead token and shows a "Reconnect Spotify" link. **Recovery for the demo: just re-login to Spotify to get a fresh token.** Open follow-up: no refresh-token flow yet, so the token still dies after ~1h.
+- ✅ **RESOLVED: "No songs found" was an expired Spotify token, not a search bug.** Spotify user access tokens expire after ~1 hour, and `auth.js` saves only `access_token` (discards `refresh_token`), so there's no refresh. An expired token → `401 Invalid access token` → previously swallowed by `searchSongs` as `[]` → misleading "No songs found". Search itself works fine with a valid token (verified via client-credentials token: 5 tracks). **Fix applied:** `searchSongs` now throws an error with `code: 'SPOTIFY_AUTH'` on 401/403; `/api/current-songs` returns `401 {code:'SPOTIFY_AUTH'}`; frontend `fetchSongs` clears the dead token and shows a "Reconnect Spotify" link. **Recovery for the demo: just re-login to Spotify to get a fresh token.** Follow-up DONE: refresh-token flow now implemented (see API decisions / `/auth/spotify/refresh`), so the token auto-renews instead of dying after ~1h.
 
 ## Git
 This repo uses a **local** git identity (do not change global):

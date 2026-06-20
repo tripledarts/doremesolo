@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Logout button
   document.getElementById('spotify-logout-btn').addEventListener('click', () => {
-    localStorage.removeItem('spotify_token');
+    clearSpotifyAuth();
     window.location.reload();
   });
 });
@@ -82,21 +82,37 @@ function setupEventListeners() {
   });
 }
 
+function requestSongs(token) {
+  return fetch(
+    `/api/current-songs?bpm=${currentPace}&mood=${currentMood}&vocals=${currentVocals}&token=${token}`
+  );
+}
+
 async function fetchSongs() {
   try {
     document.getElementById('refresh-btn').disabled = true;
     document.getElementById('refresh-btn').textContent = 'Loading...';
 
-    const response = await fetch(
-      `/api/current-songs?bpm=${currentPace}&mood=${currentMood}&vocals=${currentVocals}&token=${currentSpotifyToken}`
-    );
+    // Proactively refresh the access token if it's about to expire.
+    currentSpotifyToken = await getValidSpotifyToken();
+
+    let response = await requestSongs(currentSpotifyToken);
+
+    // Reactive fallback: token rejected mid-session — try one refresh + retry.
+    if (response.status === 401) {
+      const refreshed = await refreshSpotifyToken();
+      if (refreshed) {
+        currentSpotifyToken = refreshed;
+        response = await requestSongs(refreshed);
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json();
       if (error.code === 'SPOTIFY_AUTH') {
-        // Token expired/invalid — stop the workout and prompt a reconnect.
+        // Refresh failed or no refresh token — stop and prompt a reconnect.
         mockWorkoutActive = false;
-        localStorage.removeItem('spotify_token');
+        clearSpotifyAuth();
         showError(`${error.error} <a href="/auth/spotify/login">Reconnect Spotify</a>`);
         return;
       }
