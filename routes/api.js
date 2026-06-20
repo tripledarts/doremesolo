@@ -1,5 +1,5 @@
 const express = require('express');
-const { searchSongs, getRecommendations } = require('../services/spotify');
+const { searchSongs } = require('../services/spotify');
 const { rankSongsByMood } = require('../services/gemini');
 const { getCurrentPace } = require('../services/strava-mock');
 const router = express.Router();
@@ -53,36 +53,22 @@ router.get('/current-songs', async (req, res) => {
 
   try {
     const zone = getPaceZone(bpmNum);
-    const moodParams = MOOD_PARAMS[mood] || MOOD_PARAMS.happy;
-    const vocalsParam = VOCALS_PARAMS[vocals] || {};
 
-    // Option D: two BPM targets — direct match and double-time
-    const targets = [bpmNum, bpmNum * 2];
-
-    // Option A: fetch recommendations for both targets in parallel
-    const batches = await Promise.all(
-      targets.map(tempo =>
-        getRecommendations({ genres: zone.genres, targetTempo: tempo, moodParams, vocalsParam, token, limit: 10 })
-      )
+    // Search once per genre seed and merge results (Spotify /recommendations is unavailable
+    // without extended quota approval, so we use genre-tagged search queries instead)
+    const searches = await Promise.all(
+      zone.genres.map(genre => searchSongs(`genre:${genre} ${mood}`, token, 10))
     );
 
-    // Deduplicate across both batches
     const seen = new Set();
-    const spotifySongs = batches.flat().filter(track => {
-      if (seen.has(track.id)) return false;
+    const spotifySongs = searches.flat().filter(track => {
+      if (!track?.id || seen.has(track.id)) return false;
       seen.add(track.id);
       return true;
     });
 
-    // If recommendations returned nothing (e.g. API tier restriction), fall back to text search
     if (!spotifySongs.length) {
-      console.log('⚠️ Recommendations returned empty — falling back to text search');
-      const query = `${mood} ${zone.genres[0]}`;
-      const fallback = await searchSongs(query, token, 15);
-      if (!fallback.length) {
-        return res.json({ songs: [], message: 'No songs found for this pace and mood' });
-      }
-      fallback.forEach(t => spotifySongs.push(t));
+      return res.json({ songs: [], message: 'No songs found for this pace and mood' });
     }
 
     // Gemini re-ranks by mood fit

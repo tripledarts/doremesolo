@@ -2,15 +2,14 @@ const axios = require('axios');
 
 const SPOTIFY_API_URL = 'https://api.spotify.com/v1';
 
-async function searchSongs(query, token, limit = 15) {
+async function searchSongs(query, token, limit = 10) {
   if (!token) {
-    console.error('❌ Spotify token is missing');
     const err = new Error('Not connected to Spotify — please reconnect.');
     err.code = 'SPOTIFY_AUTH';
     throw err;
   }
 
-  console.log(`🔍 Searching Spotify: "${query}"`);
+  console.log(`🔍 Searching Spotify: "${query}" (limit=${limit})`);
 
   const url = `${SPOTIFY_API_URL}/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`;
 
@@ -24,8 +23,6 @@ async function searchSongs(query, token, limit = 15) {
     return tracks;
   } catch (error) {
     const status = error.response?.status;
-    // 401/403 = the user token is expired/invalid. Surface it as an auth error so the
-    // UI can prompt a reconnect instead of showing a misleading "No songs found".
     if (status === 401 || status === 403) {
       console.error(`❌ Spotify auth error ${status}:`, error.response.data?.error?.message || error.message);
       const err = new Error('Spotify session expired — please reconnect Spotify.');
@@ -33,11 +30,8 @@ async function searchSongs(query, token, limit = 15) {
       err.status = status;
       throw err;
     }
-    if (error.response) {
-      console.error(`❌ Spotify API error ${status}:`, error.response.data?.error?.message || error.message);
-    } else {
-      console.error('❌ Spotify search error:', error.message);
-    }
+    // Log full error body so we can see exactly what Spotify says
+    console.error(`❌ Spotify search error ${status}:`, JSON.stringify(error.response?.data || error.message));
     return [];
   }
 }
