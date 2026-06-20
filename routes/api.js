@@ -126,9 +126,9 @@ router.get('/current-songs', async (req, res) => {
   }
 });
 
-// GET /api/recently-played
+// GET /api/recently-played — returns last 5 for display; full list kept in memory for exclusion
 router.get('/recently-played', (req, res) => {
-  res.json({ songs: sessionState.recentlyPlayed });
+  res.json({ songs: sessionState.recentlyPlayed.slice(0, 5) });
 });
 
 // POST /api/song-played — body: { songId, name, artist, image_url }

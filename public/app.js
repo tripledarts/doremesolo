@@ -294,6 +294,7 @@ function requestSongs(token, limit = 5) {
 // we restart the context via playQueue() when the last track ends instead)
 async function fetchReplacement() {
   if (pendingFetch) return;
+  if (currentQueue.length >= 5) return; // queue is already full
   pendingFetch = true;
   try {
     const token = await getValidSpotifyToken();
