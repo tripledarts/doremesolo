@@ -353,7 +353,8 @@ async function refreshQueueTail() {
     if (!res.ok) return;
     const data = await res.json();
     if (data.songs?.length > 0) {
-      currentQueue = [currentQueue[0], ...data.songs].filter(Boolean);
+      const keepSong = { ...currentQueue[0], tempo: currentQueue[0].tempo || currentPace };
+      currentQueue = [keepSong, ...data.songs].filter(Boolean);
       renderQueue();
 
       // Re-load Spotify's context with the updated queue so the new songs
