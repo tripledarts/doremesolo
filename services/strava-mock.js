@@ -54,9 +54,9 @@ function loadMockData() {
       .map(v => {
         const num = parseFloat(v);
         if (isNaN(num) || num === 0) return null;
-        // Speed is in m/s, convert to running cadence BPM
-        // Typical running: 1.5-3.5 m/s → 100-180 BPM
-        const bpm = Math.max(80, Math.min(180, 60 + num * 40));
+        // SPD data is z-score standardized (not raw m/s).
+        // Map z-score range ~(-2 to +2) to BPM range ~(70-190), centered at 130.
+        const bpm = Math.max(80, Math.min(180, 130 + num * 30));
         return bpm;
       })
       .filter(v => v !== null);
