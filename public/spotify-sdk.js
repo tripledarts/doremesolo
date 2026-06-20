@@ -1,13 +1,11 @@
-// Store Spotify token (+ refresh token and expiry) from URL
+// Store the short-lived access token + expiry from URL. The refresh token lives
+// in an HttpOnly cookie set by the server — browser JS never sees or stores it.
 function getSpotifyToken() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('spotify_token');
 
   if (token) {
     localStorage.setItem('spotify_token', token);
-
-    const refresh = params.get('spotify_refresh');
-    if (refresh) localStorage.setItem('spotify_refresh_token', refresh);
 
     const expiresIn = parseInt(params.get('spotify_expires_in') || '3600', 10);
     localStorage.setItem('spotify_token_expires_at', String(Date.now() + expiresIn * 1000));
@@ -18,14 +16,15 @@ function getSpotifyToken() {
   return localStorage.getItem('spotify_token');
 }
 
-// Exchange the stored refresh token for a fresh access token (via our server).
+// Ask the server to mint a fresh access token using the HttpOnly refresh cookie.
+// No token is sent from JS — the cookie rides along automatically (same-origin).
 // Returns the new access token, or null if refresh isn't possible.
 async function refreshSpotifyToken() {
-  const refresh = localStorage.getItem('spotify_refresh_token');
-  if (!refresh) return null;
-
   try {
-    const res = await fetch(`/auth/spotify/refresh?refresh_token=${encodeURIComponent(refresh)}`);
+    const res = await fetch('/auth/spotify/refresh', {
+      method: 'POST',
+      credentials: 'same-origin'
+    });
     if (!res.ok) return null;
 
     const data = await res.json();
@@ -34,7 +33,6 @@ async function refreshSpotifyToken() {
     localStorage.setItem('spotify_token', data.access_token);
     const expiresIn = data.expires_in || 3600;
     localStorage.setItem('spotify_token_expires_at', String(Date.now() + expiresIn * 1000));
-    if (data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
 
     console.log('🔄 Spotify token refreshed');
     return data.access_token;
@@ -57,11 +55,13 @@ async function getValidSpotifyToken() {
   return token;
 }
 
-// Clear all stored Spotify auth (on logout or unrecoverable auth failure).
+// Clear all Spotify auth: local access token + the server-side refresh cookie.
 function clearSpotifyAuth() {
   localStorage.removeItem('spotify_token');
-  localStorage.removeItem('spotify_refresh_token');
   localStorage.removeItem('spotify_token_expires_at');
+  localStorage.removeItem('spotify_refresh_token'); // legacy cleanup (no longer stored)
+  // Best-effort clear of the HttpOnly refresh cookie (only the server can).
+  return fetch('/auth/spotify/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
 }
 
 // Fetch user profile to verify auth

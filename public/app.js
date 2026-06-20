@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Logout button
-  document.getElementById('spotify-logout-btn').addEventListener('click', () => {
-    clearSpotifyAuth();
+  document.getElementById('spotify-logout-btn').addEventListener('click', async () => {
+    await clearSpotifyAuth();
     window.location.reload();
   });
 });

@@ -48,12 +48,14 @@ mock-data/         Kaggle "Sport Activity Dataset - MTS-5" CSVs (gitignored? NO 
 - `POST /api/test-spotify` — debug-only Spotify search check
 
 ### Auth endpoints (`routes/auth.js`)
-- `GET /auth/spotify/login` → `GET /auth/spotify/callback` — OAuth; callback redirects to `/index.html?spotify_token=&spotify_refresh=&spotify_expires_in=` (passes refresh token + lifetime to the client).
-- `GET /auth/spotify/refresh?refresh_token=` — exchanges a refresh token for a fresh access token (uses `client_secret`, so must be server-side). Returns `{access_token, expires_in, refresh_token?}`; `401 {code:'SPOTIFY_AUTH'}` if Spotify rejects it.
+- `GET /auth/spotify/login` → `GET /auth/spotify/callback` — OAuth. Callback sets the **refresh token in an HttpOnly cookie** (`spotify_refresh`, path `/auth/spotify`, `SameSite=Lax`, `Secure` only in production) and redirects to `/index.html?spotify_token=&spotify_expires_in=` (only the short-lived access token + lifetime go to the client).
+- `POST /auth/spotify/refresh` — reads the refresh token from the HttpOnly cookie (never from URL/body, so it stays out of logs), exchanges it for a fresh access token (`client_secret` stays server-side). Returns `{access_token, expires_in}`; rotates the cookie if Spotify returns a new refresh token; `401 {code:'SPOTIFY_AUTH'}` if missing/rejected.
+- `POST /auth/spotify/logout` — clears the refresh cookie.
+- **Security note:** the long-lived refresh token is deliberately NEVER exposed to browser JS, the URL, or `localStorage` (only the ~1h access token is). This was a security-review fix — keep it that way.
 
 ## API decisions
 - **Song ranking: Gemini API** (switched from Claude midway). Model `gemini-1.5-flash`. Auth via `?key=` query param. Key in `.env` as `GEMINI_API_KEY`.
-- **Songs: Spotify Web API**, user has Premium. Auth scopes in `routes/auth.js`. **Token refresh implemented:** access tokens expire in ~1h; the client stores the `refresh_token`+expiry (in `localStorage` via `spotify-sdk.js`) and auto-renews — proactively before expiry (`getValidSpotifyToken`) and reactively on a 401 (one refresh + retry in `fetchSongs`) before prompting a reconnect. Docs: https://developer.spotify.com/documentation/web-api — note: this site does **not** serve an `llms.txt`/`llms-full.txt` (both checked 2026-06-20: `/llms.txt` returns the normal HTML page, `/llms-full.txt` is 404), so read the regular docs pages directly.
+- **Songs: Spotify Web API**, user has Premium. Auth scopes in `routes/auth.js`. **Token refresh implemented:** access tokens expire in ~1h. The refresh token lives in an HttpOnly cookie (see Auth endpoints); the client holds only the short-lived access token (+expiry) in `localStorage` and auto-renews via `POST /auth/spotify/refresh` — proactively before expiry (`getValidSpotifyToken`) and reactively on a 401 (one refresh + retry in `fetchSongs`) before prompting a reconnect. Docs: https://developer.spotify.com/documentation/web-api — note: this site does **not** serve an `llms.txt`/`llms-full.txt` (both checked 2026-06-20: `/llms.txt` returns the normal HTML page, `/llms-full.txt` is 404), so read the regular docs pages directly.
 - **Pace: mock data** from Kaggle (real Strava requires paid tier). `strava-mock.js` reads a "Running" activity from the CSVs and cycles its pace samples. Falls back to a synthetic sequence if CSVs missing.
 - **Hosting target: Vercel** (not yet deployed).
 
