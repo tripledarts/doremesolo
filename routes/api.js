@@ -119,11 +119,13 @@ router.get('/current-songs', async (req, res) => {
       }));
     }
 
-    // Enrich with tempo from audio features (best-effort — failures don't block the response)
+    // Enrich with tempo from audio features (best-effort — many apps get 403 here
+    // because Spotify restricted /audio-features to Extended Quota Mode apps).
+    // Fall back to the user's running pace (bpmNum) so the tag always shows something.
     const audioFeatures = await getBatchAudioFeatures(enriched.map(s => s.id), token);
     enriched = enriched.map(s => ({
       ...s,
-      tempo: audioFeatures[s.id]?.tempo ? Math.round(audioFeatures[s.id].tempo) : null
+      tempo: audioFeatures[s.id]?.tempo ? Math.round(audioFeatures[s.id].tempo) : bpmNum
     }));
 
     console.log(`✓ Returning ${enriched.length} songs`);

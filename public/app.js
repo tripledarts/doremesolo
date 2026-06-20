@@ -338,7 +338,7 @@ async function fetchReplacement() {
 
 // Replace songs 2-5 in the queue with fresh songs matching the current preference.
 // Called when the user changes mood or vocals mid-session; song 1 (currently
-// playing) is kept so playback is never interrupted.
+// playing) is kept at the same playback position so there is no audible gap.
 async function refreshQueueTail() {
   try {
     const token = await getValidSpotifyToken();
@@ -355,6 +355,24 @@ async function refreshQueueTail() {
     if (data.songs?.length > 0) {
       currentQueue = [currentQueue[0], ...data.songs].filter(Boolean);
       renderQueue();
+
+      // Re-load Spotify's context with the updated queue so the new songs
+      // actually play after the current one. Resume at the current track
+      // position so there is no audible restart of the playing song.
+      if (playerDeviceId && currentQueue[0]?.uri) {
+        const uris = currentQueue.filter(s => s.uri).map(s => s.uri);
+        let position_ms = 0;
+        try {
+          const state = await spotifyPlayer.getCurrentState();
+          position_ms = state?.position || 0;
+        } catch (_) {}
+        justRestartedContext = true;
+        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${playerDeviceId}`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uris, offset: { uri: currentQueue[0].uri }, position_ms })
+        });
+      }
     }
   } catch (e) {
     console.error('refreshQueueTail error:', e);
