@@ -1,14 +1,17 @@
-// Escape untrusted strings before injecting into innerHTML
+// Escape untrusted strings before injecting into innerHTML (quote-aware for attribute safety)
 function esc(str) {
-  const d = document.createElement('div');
-  d.textContent = str ?? '';
-  return d.innerHTML;
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-// Validate a URL is safe to put in href/src (must be https or relative)
+// Validate a URL is https, then HTML-escape it so it's safe in href/src attributes
 function safeUrl(url, fallback = '') {
-  if (!url) return fallback;
-  return /^https?:\/\//i.test(url) ? url : fallback;
+  const target = (url && /^https?:\/\//i.test(url)) ? url : fallback;
+  return esc(target);
 }
 
 let currentSpotifyToken = null;
