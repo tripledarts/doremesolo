@@ -284,10 +284,12 @@ function setupEventListeners() {
 
   document.getElementById('mood-select').addEventListener('change', e => {
     currentMood = e.target.value;
+    if (playlistStarted && currentQueue.length > 0) refreshQueueTail();
   });
 
   document.getElementById('vocals-select').addEventListener('change', e => {
     currentVocals = e.target.value;
+    if (playlistStarted && currentQueue.length > 0) refreshQueueTail();
   });
 
   document.getElementById('surprise-btn').addEventListener('click', () => {
@@ -331,6 +333,31 @@ async function fetchReplacement() {
     console.error('fetchReplacement error:', e);
   } finally {
     pendingFetch = false;
+  }
+}
+
+// Replace songs 2-5 in the queue with fresh songs matching the current preference.
+// Called when the user changes mood or vocals mid-session; song 1 (currently
+// playing) is kept so playback is never interrupted.
+async function refreshQueueTail() {
+  try {
+    const token = await getValidSpotifyToken();
+    currentSpotifyToken = token;
+    // Exclude played songs + the currently playing song (we're keeping it)
+    const playedIds = getExcludeParam();
+    const keepId = currentQueue[0]?.id;
+    const allExclude = [playedIds, keepId].filter(Boolean).join(',');
+    const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit: 4 });
+    if (allExclude) params.set('exclude', allExclude);
+    const res = await fetch(`/api/current-songs?${params.toString()}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.songs?.length > 0) {
+      currentQueue = [currentQueue[0], ...data.songs].filter(Boolean);
+      renderQueue();
+    }
+  } catch (e) {
+    console.error('refreshQueueTail error:', e);
   }
 }
 
