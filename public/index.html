@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoReMeSoLo - Music Powered by Your Pace</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="container">
+    <!-- Header -->
+    <header>
+      <h1>🎵 DoReMeSoLo</h1>
+      <p>Music powered by your pace</p>
+      <div id="auth-status">
+        <span id="user-info">Not logged in</span>
+        <button id="spotify-login-btn" class="btn">Login with Spotify</button>
+      </div>
+    </header>
+
+    <!-- Main app (hidden until authenticated) -->
+    <main id="app" style="display:none;">
+      <!-- Status -->
+      <div id="status-bar" class="status">
+        <span id="connection-status">🔴 Not connected</span>
+        <span id="current-bpm">BPM: --</span>
+        <span id="steps-per-min">Steps/min: --</span>
+      </div>
+
+      <!-- Pace input (for mock mode during dev) -->
+      <section class="controls">
+        <div class="control-group">
+          <label for="pace-input">Current Pace (BPM):</label>
+          <input type="range" id="pace-input" min="80" max="180" value="120" step="5">
+          <span id="pace-display">120</span>
+        </div>
+
+        <div class="control-group">
+          <label for="mood-select">Mood:</label>
+          <select id="mood-select">
+            <option value="happy">Happy</option>
+            <option value="energetic">Energetic</option>
+            <option value="chill">Chill</option>
+            <option value="focused">Focused</option>
+            <option value="sad">Sad</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="vocals-select">Vocals:</label>
+          <select id="vocals-select">
+            <option value="combo">Combo</option>
+            <option value="voiced">Voiced</option>
+            <option value="voiceless">Voiceless</option>
+          </select>
+        </div>
+
+        <button id="refresh-btn" class="btn btn-primary">Get Songs</button>
+        <button id="surprise-btn" class="btn">Surprise Me</button>
+      </section>
+
+      <!-- Playlist -->
+      <section class="playlist-section">
+        <h2>Now Playing</h2>
+        <div id="playlist" class="playlist">
+          <div class="placeholder">Click "Get Songs" to start</div>
+        </div>
+      </section>
+
+      <!-- Recently played -->
+      <section class="recent-section">
+        <h2>Recently Played</h2>
+        <ul id="recently-played" class="recent-list">
+          <li class="placeholder">No songs played yet</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="spotify-sdk.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
