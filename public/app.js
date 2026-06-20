@@ -112,6 +112,7 @@ function handlePlayerStateChange(state) {
   if (lastPlayedTrack && lastPlayedTrack.id !== track.id) {
     markSongPlayed(lastPlayedTrack);
     removeSongFromQueue(lastPlayedTrack.id);
+    fetchReplacement();
     lastSongPlaying = false;
   }
 
@@ -124,6 +125,9 @@ function handlePlayerStateChange(state) {
       markSongPlayed({ id: track.id, name: track.name, artist: track.artists?.[0]?.name, image_url: track.album?.images?.[0]?.url });
       removeSongFromQueue(track.id);
       lastSongPlaying = false;
+      // Restart Spotify with the pre-fetched replacement songs
+      if (currentQueue.length > 0) playQueue(currentQueue);
+      fetchReplacement();
     }
   }
 
@@ -144,11 +148,10 @@ function handlePlayerStateChange(state) {
   if (bar) bar.textContent = `${track.name ?? ''} — ${track.artists?.[0]?.name ?? ''}`;
 }
 
-// Remove a played/skipped song from Now Playing and immediately fetch a replacement
+// Remove a played/skipped song from Now Playing
 function removeSongFromQueue(songId) {
   currentQueue = currentQueue.filter(s => s.id !== songId);
   renderQueue();
-  fetchReplacement(); // always fetch 1 new song straight away
 }
 
 function updateNowPlayingDisplay(trackId) {
@@ -287,7 +290,8 @@ function requestSongs(token, limit = 5) {
   return fetch(`/api/current-songs?${params.toString()}`);
 }
 
-// Fetch 1 replacement song and append it to the queue without restarting playback
+// Fetch 1 replacement song and add it to the visual queue (no Spotify queue API needed —
+// we restart the context via playQueue() when the last track ends instead)
 async function fetchReplacement() {
   if (pendingFetch) return;
   pendingFetch = true;
@@ -297,30 +301,14 @@ async function fetchReplacement() {
     const res = await requestSongs(token, 1);
     if (!res.ok) return;
     const data = await res.json();
-    if (data.songs?.length > 0) appendSongToQueue(data.songs[0]);
+    if (data.songs?.length > 0) {
+      currentQueue.push(data.songs[0]);
+      renderQueue();
+    }
   } catch (e) {
     console.error('fetchReplacement error:', e);
   } finally {
     pendingFetch = false;
-  }
-}
-
-// Add 1 song to the visual queue and to Spotify's playback queue
-async function appendSongToQueue(song) {
-  currentQueue.push(song);
-  renderQueue();
-
-  if (song.uri && playerDeviceId) {
-    try {
-      const token = await getValidSpotifyToken();
-      currentSpotifyToken = token;
-      await fetch(
-        `https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(song.uri)}&device_id=${playerDeviceId}`,
-        { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }
-      );
-    } catch (e) {
-      console.error('appendSongToQueue error:', e);
-    }
   }
 }
 

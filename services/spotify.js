@@ -11,7 +11,8 @@ async function searchSongs(query, token, limit = 10) {
 
   console.log(`🔍 Searching Spotify: "${query}" (limit=${limit})`);
 
-  const url = `${SPOTIFY_API_URL}/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`;
+  const offset = Math.floor(Math.random() * 50);
+  const url = `${SPOTIFY_API_URL}/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}&offset=${offset}`;
 
   try {
     const response = await axios.get(url, {
