@@ -270,7 +270,7 @@ function setupEventListeners() {
       paceReadings = [];
       btn.textContent = '⏸️ Stop Workout';
       btn.style.backgroundColor = '#ff6b6b';
-      status.textContent = '🔴 Collecting pace data (30s)...';
+      status.textContent = '🔴 Collecting pace data (9s)...';
       status.style.color = '#ff6b6b';
     } else {
       mockWorkoutActive = false;
@@ -491,12 +491,12 @@ function simulatePaceUpdates() {
 
       const elapsed = Date.now() - workoutStartTime;
 
-      if (!playlistStarted && elapsed < 30000) {
+      if (!playlistStarted && elapsed < 9000) {
         paceReadings.push(currentPace);
         document.getElementById('workout-status').textContent =
           `🔴 Collecting pace... ${Math.floor(elapsed / 1000)}s`;
 
-      } else if (!playlistStarted && elapsed >= 30000) {
+      } else if (!playlistStarted && elapsed >= 9000) {
         const avgPace = Math.round(
           paceReadings.reduce((a, b) => a + b, 0) / paceReadings.length
         );
