@@ -18,7 +18,7 @@ let currentSpotifyToken = null;
 let currentPace = 120;
 let currentMood = 'happy';
 let currentVocals = 'combo';
-let surpriseGenre = null; // locked-in genre for Surprise Me mode; null = normal mode
+let surpriseMode = false;
 let mockWorkoutActive = false;
 let workoutStartTime = null;
 let paceReadings = [];
@@ -275,7 +275,6 @@ function setupEventListeners() {
     } else {
       mockWorkoutActive = false;
       playlistStarted = false;
-      surpriseGenre = null; // reset surprise mode on new workout
       btn.textContent = '▶️ Start Mock Workout';
       btn.style.backgroundColor = '';
       status.textContent = 'Stopped';
@@ -294,16 +293,7 @@ function setupEventListeners() {
   });
 
   document.getElementById('surprise-btn').addEventListener('click', () => {
-    const SURPRISE_GENRES = [
-      'jazz', 'blues', 'classical', 'country', 'folk', 'reggae', 'soul', 'funk',
-      'metal', 'punk', 'indie', 'alternative', 'latin', 'k-pop', 'afrobeats',
-      'gospel', 'bossa-nova', 'ambient', 'swing', 'disco', 'grunge', 'emo', 'ska',
-      'house', 'techno', 'drum-and-bass', 'dubstep', 'reggaeton', 'salsa',
-      'flamenco', 'bluegrass', 'indie-folk', 'shoegaze', 'post-rock',
-      'prog-rock', 'heavy-metal', 'j-pop', 'fado', 'tango', 'cumbia', 'opera',
-      'new-wave', 'synth-pop', 'trip-hop', 'lo-fi', 'garage', 'british'
-    ];
-    surpriseGenre = SURPRISE_GENRES[Math.floor(Math.random() * SURPRISE_GENRES.length)];
+    surpriseMode = true;
     fetchSongs();
   });
 }
@@ -314,7 +304,6 @@ function requestSongs(token, limit = 5) {
   const exclude = getExcludeParam();
   const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit });
   if (exclude) params.set('exclude', exclude);
-  if (surpriseGenre) params.set('surprise_genre', surpriseGenre);
   return fetch(`/api/current-songs?${params.toString()}`);
 }
 
@@ -333,7 +322,6 @@ async function fetchReplacement() {
     const allExclude = [playedIds, queueIds].filter(Boolean).join(',');
     const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit: 1 });
     if (allExclude) params.set('exclude', allExclude);
-    if (surpriseGenre) params.set('surprise_genre', surpriseGenre);
     const res = await fetch(`/api/current-songs?${params.toString()}`);
     if (!res.ok) return;
     const data = await res.json();
@@ -361,7 +349,6 @@ async function refreshQueueTail() {
     const allExclude = [playedIds, keepId].filter(Boolean).join(',');
     const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit: 4 });
     if (allExclude) params.set('exclude', allExclude);
-    if (surpriseGenre) params.set('surprise_genre', surpriseGenre);
     const res = await fetch(`/api/current-songs?${params.toString()}`);
     if (!res.ok) return;
     const data = await res.json();
@@ -421,7 +408,13 @@ async function fetchSongs() {
 
     const data = await response.json();
 
-    displaySongs(data.songs);
+    if (surpriseMode && data.songs.length > 0) {
+      const idx = Math.floor(Math.random() * data.songs.length);
+      displaySongs([data.songs[idx]]);
+      surpriseMode = false;
+    } else {
+      displaySongs(data.songs);
+    }
   } catch (error) {
     console.error('Error fetching songs:', error);
     showError('Network error: ' + esc(error.message));
