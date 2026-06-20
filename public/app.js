@@ -30,8 +30,9 @@ let playerDeviceId = null;
 let spotifySDKReady = false;
 let lastPlayedTrack = null;
 let currentQueue = [];
-let lastSongPlaying = false; // true when we're on the final track in the queue
-let pendingFetch = false;    // prevents double auto-fetch
+let lastSongPlaying = false;       // true when we're on the final track in the queue
+let pendingFetch = false;          // prevents double auto-fetch
+let justRestartedContext = false;  // prevents double-restart after context transition
 
 // Played song IDs with timestamps — used to exclude repeats for 1 hour
 const playedSongIds = new Map(); // id → Date.now() when played
@@ -108,12 +109,25 @@ function handlePlayerStateChange(state) {
 
   const nextTracks = state.track_window?.next_tracks ?? [];
 
+  // Consume the one-shot restart-suppression flag so the first state change
+  // after a context restart doesn't trigger a second restart
+  const suppressRestart = justRestartedContext;
+  justRestartedContext = false;
+
   // Track changed → previous song was played or skipped
   if (lastPlayedTrack && lastPlayedTrack.id !== track.id) {
+    const wasLast = lastPlayedTrack.isLastInContext;
     markSongPlayed(lastPlayedTrack);
     removeSongFromQueue(lastPlayedTrack.id);
     fetchReplacement();
     lastSongPlaying = false;
+
+    // If the previous song was the last in Spotify's context and the user pressed Next
+    // (causing Spotify to loop back), restart with our pre-fetched queue instead
+    if (!suppressRestart && wasLast && currentQueue.length > 0) {
+      justRestartedContext = true;
+      playQueue(currentQueue);
+    }
   }
 
   // Detect natural end of last song:
@@ -125,8 +139,10 @@ function handlePlayerStateChange(state) {
       markSongPlayed({ id: track.id, name: track.name, artist: track.artists?.[0]?.name, image_url: track.album?.images?.[0]?.url });
       removeSongFromQueue(track.id);
       lastSongPlaying = false;
-      // Restart Spotify with the pre-fetched replacement songs
-      if (currentQueue.length > 0) playQueue(currentQueue);
+      if (currentQueue.length > 0) {
+        justRestartedContext = true;
+        playQueue(currentQueue);
+      }
       fetchReplacement();
     }
   }
@@ -135,7 +151,8 @@ function handlePlayerStateChange(state) {
     id: track.id,
     name: track.name,
     artist: track.artists?.[0]?.name,
-    image_url: track.album?.images?.[0]?.url
+    image_url: track.album?.images?.[0]?.url,
+    isLastInContext: nextTracks.length === 0
   };
 
   updateNowPlayingDisplay(track.id);
@@ -294,7 +311,6 @@ function requestSongs(token, limit = 5) {
 // we restart the context via playQueue() when the last track ends instead)
 async function fetchReplacement() {
   if (pendingFetch) return;
-  if (currentQueue.length >= 5) return; // queue is already full
   pendingFetch = true;
   try {
     const token = await getValidSpotifyToken();
