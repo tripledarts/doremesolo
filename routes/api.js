@@ -1,5 +1,5 @@
 const express = require('express');
-const { searchSongs } = require('../services/spotify');
+const { searchSongs, getBatchAudioFeatures } = require('../services/spotify');
 const { rankSongsByMood } = require('../services/gemini');
 const { getCurrentPace } = require('../services/strava-mock');
 const router = express.Router();
@@ -118,6 +118,13 @@ router.get('/current-songs', async (req, res) => {
         match_score: 75
       }));
     }
+
+    // Enrich with tempo from audio features (best-effort — failures don't block the response)
+    const audioFeatures = await getBatchAudioFeatures(enriched.map(s => s.id), token);
+    enriched = enriched.map(s => ({
+      ...s,
+      tempo: audioFeatures[s.id]?.tempo ? Math.round(audioFeatures[s.id].tempo) : null
+    }));
 
     console.log(`✓ Returning ${enriched.length} songs`);
     res.json({ songs: enriched });

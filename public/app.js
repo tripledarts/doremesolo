@@ -270,7 +270,7 @@ function setupEventListeners() {
       paceReadings = [];
       btn.textContent = '⏸️ Stop Workout';
       btn.style.backgroundColor = '#ff6b6b';
-      status.textContent = '🔴 Collecting pace data (9s)...';
+      status.textContent = '🔴 Collecting pace data (6s)...';
       status.style.color = '#ff6b6b';
     } else {
       mockWorkoutActive = false;
@@ -416,7 +416,7 @@ function songCardHTML(song, isFirst) {
         <h3>${isFirst ? '▶ ' : ''}${esc(song.name)}</h3>
         <p>${esc(song.artist)}</p>
         <p><em>${esc(song.reason)}</em></p>
-        <div class="match-score">Match: ${esc(String(song.match_score))}%</div>
+        ${song.tempo ? `<div class="match-score">${esc(String(song.tempo))} BPM</div>` : ''}
       </div>
       <div class="song-actions">
         <a href="${safeUrl(song.spotify_url, '#')}" target="_blank" rel="noopener noreferrer" class="btn-link">Open in Spotify</a>
@@ -427,7 +427,11 @@ function songCardHTML(song, isFirst) {
 function renderQueue() {
   const playlistDiv = document.getElementById('playlist');
   if (!currentQueue.length) return;
-  playlistDiv.innerHTML = currentQueue.map((song, i) => songCardHTML(song, i === 0)).join('');
+  const playingId = lastPlayedTrack?.id;
+  playlistDiv.innerHTML = currentQueue.map((song, i) => {
+    const isPlaying = playingId ? song.id === playingId : i === 0;
+    return songCardHTML(song, isPlaying);
+  }).join('');
 }
 
 function displaySongs(songs) {
@@ -519,12 +523,12 @@ function simulatePaceUpdates() {
 
       const elapsed = Date.now() - workoutStartTime;
 
-      if (!playlistStarted && elapsed < 9000) {
+      if (!playlistStarted && elapsed < 6000) {
         paceReadings.push(currentPace);
         document.getElementById('workout-status').textContent =
           `🔴 Collecting pace... ${Math.floor(elapsed / 1000)}s`;
 
-      } else if (!playlistStarted && elapsed >= 9000) {
+      } else if (!playlistStarted && elapsed >= 6000) {
         const avgPace = Math.round(
           paceReadings.reduce((a, b) => a + b, 0) / paceReadings.length
         );

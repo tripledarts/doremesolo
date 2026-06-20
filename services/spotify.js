@@ -37,6 +37,23 @@ async function searchSongs(query, token, limit = 10) {
   }
 }
 
+async function getBatchAudioFeatures(trackIds, token) {
+  if (!trackIds.length) return {};
+  try {
+    const response = await axios.get(
+      `${SPOTIFY_API_URL}/audio-features?ids=${trackIds.join(',')}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    const features = response.data.audio_features || [];
+    const map = {};
+    features.forEach(f => { if (f?.id) map[f.id] = f; });
+    return map;
+  } catch (error) {
+    console.error('getBatchAudioFeatures error:', error.message);
+    return {};
+  }
+}
+
 async function getTrackAudioFeatures(trackId, token) {
   try {
     const response = await axios.get(`${SPOTIFY_API_URL}/audio-features/${trackId}`, {
@@ -83,4 +100,4 @@ async function getRecommendations({ genres, targetTempo, moodParams, vocalsParam
   }
 }
 
-module.exports = { searchSongs, getTrackAudioFeatures, getRecommendations };
+module.exports = { searchSongs, getBatchAudioFeatures, getTrackAudioFeatures, getRecommendations };
