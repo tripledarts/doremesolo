@@ -49,7 +49,15 @@ router.get('/current-songs', async (req, res) => {
     return res.status(400).json({ error: 'BPM must be between 60-200' });
   }
 
-  console.log(`🎵 Matching songs: BPM=${bpmNum}, mood=${mood}, vocals=${vocals}`);
+  // IDs the client has already played — exclude from results to avoid repeats
+  const exclude = req.query.exclude
+    ? new Set(req.query.exclude.split(',').filter(Boolean))
+    : new Set();
+
+  // How many songs to return (1 for replacements, 5 for initial load)
+  const returnLimit = Math.min(parseInt(req.query.limit) || 5, 5);
+
+  console.log(`🎵 Matching songs: BPM=${bpmNum}, mood=${mood}, vocals=${vocals}, excluding=${exclude.size}`);
 
   try {
     const zone = getPaceZone(bpmNum);
@@ -62,7 +70,7 @@ router.get('/current-songs', async (req, res) => {
 
     const seen = new Set();
     const spotifySongs = searches.flat().filter(track => {
-      if (!track?.id || seen.has(track.id)) return false;
+      if (!track?.id || seen.has(track.id) || exclude.has(track.id)) return false;
       seen.add(track.id);
       return true;
     });
@@ -76,7 +84,7 @@ router.get('/current-songs', async (req, res) => {
 
     let enriched;
     if (ranked.length > 0) {
-      enriched = ranked.slice(0, 5).map(r => {
+      enriched = ranked.slice(0, returnLimit).map(r => {
         const song = spotifySongs.find(s => s.id === r.track_id);
         if (!song) return null;
         return {
@@ -94,7 +102,7 @@ router.get('/current-songs', async (req, res) => {
 
     // Fallback if Gemini failed or returned no matching IDs
     if (!enriched || enriched.length === 0) {
-      enriched = spotifySongs.slice(0, 5).map(song => ({
+      enriched = spotifySongs.slice(0, returnLimit).map(song => ({
         id: song.id,
         name: song.name,
         artist: song.artists[0]?.name,

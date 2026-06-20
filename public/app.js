@@ -31,7 +31,31 @@ let spotifySDKReady = false;
 let lastPlayedTrack = null;
 let currentQueue = [];
 let lastSongPlaying = false; // true when we're on the final track in the queue
-let pendingFetch = false;    // prevents double auto-fetch when queue empties
+let pendingFetch = false;    // prevents double auto-fetch
+
+// Played song IDs with timestamps — used to exclude repeats for 1 hour
+const playedSongIds = new Map(); // id → Date.now() when played
+
+function addToPlayedIds(id) {
+  if (id) playedSongIds.set(id, Date.now());
+}
+
+// Returns comma-separated IDs played within the last hour
+function getExcludeParam() {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  return [...playedSongIds.entries()]
+    .filter(([, ts]) => ts > cutoff)
+    .map(([id]) => id)
+    .join(',');
+}
+
+// Periodically drop IDs older than 1 hour so they can appear again
+setInterval(() => {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  for (const [id, ts] of playedSongIds.entries()) {
+    if (ts <= cutoff) playedSongIds.delete(id);
+  }
+}, 60 * 1000);
 
 // Called by Spotify's SDK script once it finishes loading
 window.onSpotifyWebPlaybackSDKReady = () => {
@@ -120,16 +144,11 @@ function handlePlayerStateChange(state) {
   if (bar) bar.textContent = `${track.name ?? ''} — ${track.artists?.[0]?.name ?? ''}`;
 }
 
-// Remove a played/skipped song from the Now Playing list and auto-fetch when empty
+// Remove a played/skipped song from Now Playing and immediately fetch a replacement
 function removeSongFromQueue(songId) {
   currentQueue = currentQueue.filter(s => s.id !== songId);
   renderQueue();
-  if (currentQueue.length === 0 && !pendingFetch) {
-    pendingFetch = true;
-    document.getElementById('playlist').innerHTML =
-      '<div class="placeholder">Fetching next songs...</div>';
-    fetchSongs().finally(() => { pendingFetch = false; });
-  }
+  fetchReplacement(); // always fetch 1 new song straight away
 }
 
 function updateNowPlayingDisplay(trackId) {
@@ -261,10 +280,48 @@ function setupEventListeners() {
 
 // ─── Song fetching ───────────────────────────────────────────────────────────
 
-function requestSongs(token) {
-  return fetch(
-    `/api/current-songs?bpm=${currentPace}&mood=${currentMood}&vocals=${currentVocals}&token=${token}`
-  );
+function requestSongs(token, limit = 5) {
+  const exclude = getExcludeParam();
+  const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit });
+  if (exclude) params.set('exclude', exclude);
+  return fetch(`/api/current-songs?${params.toString()}`);
+}
+
+// Fetch 1 replacement song and append it to the queue without restarting playback
+async function fetchReplacement() {
+  if (pendingFetch) return;
+  pendingFetch = true;
+  try {
+    const token = await getValidSpotifyToken();
+    currentSpotifyToken = token;
+    const res = await requestSongs(token, 1);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.songs?.length > 0) appendSongToQueue(data.songs[0]);
+  } catch (e) {
+    console.error('fetchReplacement error:', e);
+  } finally {
+    pendingFetch = false;
+  }
+}
+
+// Add 1 song to the visual queue and to Spotify's playback queue
+async function appendSongToQueue(song) {
+  currentQueue.push(song);
+  renderQueue();
+
+  if (song.uri && playerDeviceId) {
+    try {
+      const token = await getValidSpotifyToken();
+      currentSpotifyToken = token;
+      await fetch(
+        `https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(song.uri)}&device_id=${playerDeviceId}`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }
+      );
+    } catch (e) {
+      console.error('appendSongToQueue error:', e);
+    }
+  }
 }
 
 async function fetchSongs() {
@@ -364,6 +421,7 @@ function showError(safeHtml) {
 
 async function markSongPlayed(song) {
   if (!song?.id) return;
+  addToPlayedIds(song.id); // exclude from future fetches for 1 hour
   try {
     await fetch('/api/song-played', {
       method: 'POST',
