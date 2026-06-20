@@ -57,7 +57,10 @@ router.get('/current-songs', async (req, res) => {
   // How many songs to return (1 for replacements, 5 for initial load)
   const returnLimit = Math.min(parseInt(req.query.limit) || 5, 5);
 
-  console.log(`🎵 Matching songs: BPM=${bpmNum}, mood=${mood}, vocals=${vocals}, excluding=${exclude.size}`);
+  // Surprise Me: override genre seeds with a single locked-in genre
+  const surprise_genre = req.query.surprise_genre || null;
+
+  console.log(`🎵 Matching songs: BPM=${bpmNum}, mood=${mood}, vocals=${vocals}, genre=${surprise_genre || 'pace-zone'}, excluding=${exclude.size}`);
 
   try {
     const zone = getPaceZone(bpmNum);
@@ -67,10 +70,13 @@ router.get('/current-songs', async (req, res) => {
     const vocalsKeyword = vocals === 'voiceless' ? ' instrumental' : '';
     const queryBase = `${mood}${vocalsKeyword}`;
 
+    // Use the surprise genre if set, otherwise fall back to pace zone genres
+    const genresToSearch = surprise_genre ? [surprise_genre] : zone.genres;
+
     // Search once per genre seed and merge results (Spotify /recommendations is unavailable
     // without extended quota approval, so we use genre-tagged search queries instead)
     const searches = await Promise.all(
-      zone.genres.map(genre => searchSongs(`genre:${genre} ${queryBase}`, token, 10))
+      genresToSearch.map(genre => searchSongs(`genre:${genre} ${queryBase}`, token, 10))
     );
 
     const seen = new Set();
