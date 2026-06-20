@@ -309,3 +309,102 @@ main {
   justify-content: center;
   align-items: center;
 }
+
+/* Player controls bar */
+.player-controls {
+  background: #1a1a2e;
+  color: white;
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+#now-playing-bar {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #1db954;
+}
+
+.player-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.player-buttons .btn {
+  font-size: 18px;
+  padding: 8px 16px;
+  min-width: 80px;
+}
+
+/* Currently playing song card highlight */
+.song-card.now-playing {
+  border-left-color: #1db954;
+  background: #f0fff4;
+}
+
+.song-card.now-playing h3 {
+  color: #1db954;
+}
+
+/* Open in Spotify link styled as a small button */
+.btn-link {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #1db954;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.btn-link:hover {
+  background: #17a348;
+}
+
+/* Recently played items */
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.recent-item:last-child {
+  border-bottom: none;
+}
+
+.recent-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.recent-thumb-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: #ddd;
+  flex-shrink: 0;
+}
+
+.recent-info {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.recent-artist {
+  color: #666;
+}

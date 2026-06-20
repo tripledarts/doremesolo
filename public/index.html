@@ -67,6 +67,17 @@
         <button id="surprise-btn" class="btn">Surprise Me</button>
       </section>
 
+      <!-- Player Controls (shown once SDK player is ready and playing) -->
+      <div id="player-controls" class="player-controls" style="display:none;">
+        <div id="now-playing-bar">
+          <span id="now-playing-text">Not playing</span>
+        </div>
+        <div class="player-buttons">
+          <button id="pause-btn" class="btn btn-primary" onclick="pauseResume()">⏸ Pause</button>
+          <button id="next-btn" class="btn" onclick="nextSong()">⏭ Next</button>
+        </div>
+      </div>
+
       <!-- Playlist -->
       <section class="playlist-section">
         <h2>Now Playing</h2>
@@ -87,5 +98,6 @@
 
   <script src="spotify-sdk.js"></script>
   <script src="app.js"></script>
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
 </body>
 </html>

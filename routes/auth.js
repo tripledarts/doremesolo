@@ -34,7 +34,7 @@ function getCookie(req, name) {
 router.get('/spotify/login', (req, res) => {
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
-  const scopes = ['streaming', 'user-read-private', 'user-read-email', 'user-library-read', 'user-read-playback-state'];
+  const scopes = ['streaming', 'user-read-private', 'user-read-email', 'user-library-read', 'user-read-playback-state', 'user-modify-playback-state'];
 
   const authUrl = `${SPOTIFY_AUTH_URL}?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes.join(' '))}`;
 

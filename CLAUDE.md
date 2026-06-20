@@ -42,9 +42,10 @@ mock-data/         Kaggle "Sport Activity Dataset - MTS-5" CSVs (gitignored? NO 
 ```
 
 ### Key endpoints (`routes/api.js`)
-- `GET /api/current-songs?bpm=&mood=&vocals=&token=` — main flow: Spotify search → Gemini rank → top 5
+- `GET /api/current-songs?bpm=&mood=&vocals=&token=` — A+B+D matching: pace zone → `getRecommendations` (two BPM targets: direct + 2×) → Gemini re-rank → top 5. Falls back to top-5 Spotify order if Gemini fails.
 - `GET /api/mock-pace` — returns current pace BPM from mock stream
-- `GET /api/recently-played`, `POST /api/song-played`
+- `GET /api/recently-played` — returns array of `{ id, name, artist, image_url }` objects (most recent first)
+- `POST /api/song-played` — body `{ songId, name, artist, image_url }` — adds to recently-played; deduplicates by id
 - `POST /api/test-spotify` — debug-only Spotify search check
 
 ### Auth endpoints (`routes/auth.js`)
@@ -62,11 +63,19 @@ mock-data/         Kaggle "Sport Activity Dataset - MTS-5" CSVs (gitignored? NO 
 ## Workout / pace logic (frontend `app.js`)
 Design intent (per user): NO manual BPM input — pace is driven entirely by mock data and shown as a large changing BPM number.
 - On "Start Mock Workout": collect pace readings for **30s**, then start playlist using the average.
-- After start: re-check every **15s** to queue the next song near the end of the current one.
+- Once playlist starts, the Spotify SDK plays through the 5-song queue automatically — no 15s auto-refresh (that would interrupt playback). User presses "Get Songs" to refresh.
 - Pace polled every 2s from `/api/mock-pace`.
 
+## Spotify Web Playback SDK (`public/app.js`)
+- SDK script loaded from `https://sdk.scdn.co/spotify-player.js` (after `app.js` so `window.onSpotifyWebPlaybackSDKReady` is defined first).
+- `initSpotifyPlayer()` creates the player, connects, captures `device_id` from `ready` event.
+- `playQueue(songs)` calls `PUT /v1/me/player/play?device_id=...` with all 5 URIs.
+- Controls: `pauseResume()` toggles pause/play; `nextSong()` marks current as played then calls `player.nextTrack()`.
+- `player_state_changed` listener: detects track changes → adds previous track to recently-played; updates now-playing bar and card highlight.
+- Auth scope added: `user-modify-playback-state` (alongside existing `streaming`, `user-read-playback-state`).
+
 ## Current state / gotchas
-- ⚠️ **`/api/current-songs` is in TEMPORARY TEST MODE** — it ignores ranking and hard-returns "Who's That Chick" by Rihanna. Original logic is preserved in a comment block in `routes/api.js`. Restore it after Spotify search is verified working.
+- ✅ **RESOLVED: Test mode removed.** `/api/current-songs` uses real A+B+D matching (pace zone → Spotify `/v1/recommendations` at direct + 2× BPM → Gemini re-rank → top 5).
 - Spotify search had a 400 "Invalid limit" error — fixed by building the search URL with query string instead of axios `params`.
 - ✅ **RESOLVED: Mock pace now varies.** `strava-mock.js` maps z-score SPD data to BPM (range 84–116, avg 113). Confirmed working on boot and via `/api/mock-pace` polling.
 - ✅ **RESOLVED: "No songs found" was an expired Spotify token, not a search bug.** Spotify user access tokens expire after ~1 hour, and `auth.js` saves only `access_token` (discards `refresh_token`), so there's no refresh. An expired token → `401 Invalid access token` → previously swallowed by `searchSongs` as `[]` → misleading "No songs found". Search itself works fine with a valid token (verified via client-credentials token: 5 tracks). **Fix applied:** `searchSongs` now throws an error with `code: 'SPOTIFY_AUTH'` on 401/403; `/api/current-songs` returns `401 {code:'SPOTIFY_AUTH'}`; frontend `fetchSongs` clears the dead token and shows a "Reconnect Spotify" link. **Recovery for the demo: just re-login to Spotify to get a fresh token.** Follow-up DONE: refresh-token flow now implemented (see API decisions / `/auth/spotify/refresh`), so the token auto-renews instead of dying after ~1h.
@@ -86,4 +95,4 @@ This repo uses a **local** git identity (do not change global):
 - Wants flawless execution on a tight timeline.
 
 ## Remaining roadmap
-Restore real song matching → verify Spotify+Gemini end-to-end → Strava (mock) polish → testing → README + AI Impact Statement + pitch deck → deploy to Vercel.
+Verify Spotify+Gemini end-to-end (song matching + playback) → Strava (mock) polish → testing → README + AI Impact Statement + pitch deck → deploy to Vercel.

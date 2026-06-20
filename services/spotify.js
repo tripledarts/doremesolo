@@ -54,4 +54,38 @@ async function getTrackAudioFeatures(trackId, token) {
   }
 }
 
-module.exports = { searchSongs, getTrackAudioFeatures };
+async function getRecommendations({ genres, targetTempo, moodParams, vocalsParam, token, limit = 10 }) {
+  const params = new URLSearchParams({
+    seed_genres: genres.join(','),
+    target_tempo: targetTempo,
+    min_tempo: Math.max(40, targetTempo - 12),
+    max_tempo: targetTempo + 12,
+    limit
+  });
+
+  Object.entries(moodParams).forEach(([k, v]) => params.set(k, v));
+  if (vocalsParam) Object.entries(vocalsParam).forEach(([k, v]) => params.set(k, v));
+
+  const url = `${SPOTIFY_API_URL}/recommendations?${params.toString()}`;
+  console.log(`🎯 Recommendations: genres=${genres.join(',')} tempo=${targetTempo}±12`);
+
+  try {
+    const response = await axios.get(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const tracks = response.data.tracks || [];
+    console.log(`✓ Got ${tracks.length} recommendations`);
+    return tracks;
+  } catch (error) {
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
+      const err = new Error('Spotify session expired — please reconnect Spotify.');
+      err.code = 'SPOTIFY_AUTH';
+      throw err;
+    }
+    console.error(`❌ Recommendations error ${status}:`, error.response?.data || error.message);
+    return [];
+  }
+}
+
+module.exports = { searchSongs, getTrackAudioFeatures, getRecommendations };

@@ -41,7 +41,8 @@ Be strict: only highly relevant matches score >70. Respond ONLY with valid JSON,
       }
     );
 
-    const content = response.data.candidates[0].content.parts[0].text;
+    const raw = response.data.candidates[0].content.parts[0].text;
+    const content = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
     const ranking = JSON.parse(content);
     return ranking;
   } catch (error) {
