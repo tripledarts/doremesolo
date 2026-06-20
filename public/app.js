@@ -298,7 +298,13 @@ async function fetchReplacement() {
   try {
     const token = await getValidSpotifyToken();
     currentSpotifyToken = token;
-    const res = await requestSongs(token, 1);
+    // Exclude both recently-played songs AND songs already in the visible queue
+    const playedIds = getExcludeParam();
+    const queueIds = currentQueue.map(s => s.id).filter(Boolean).join(',');
+    const allExclude = [playedIds, queueIds].filter(Boolean).join(',');
+    const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit: 1 });
+    if (allExclude) params.set('exclude', allExclude);
+    const res = await fetch(`/api/current-songs?${params.toString()}`);
     if (!res.ok) return;
     const data = await res.json();
     if (data.songs?.length > 0) {
