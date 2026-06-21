@@ -44,10 +44,7 @@ router.get('/current-songs', async (req, res) => {
     return res.status(400).json({ error: 'Missing required params: token, bpm, mood, vocals' });
   }
 
-  const bpmNum = parseInt(bpm);
-  if (isNaN(bpmNum) || bpmNum < 60 || bpmNum > 200) {
-    return res.status(400).json({ error: 'BPM must be between 60-200' });
-  }
+  const bpmNum = parseInt(bpm) || 100;
 
   // IDs the client has already played — exclude from results to avoid repeats
   const exclude = req.query.exclude

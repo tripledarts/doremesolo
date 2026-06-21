@@ -2,6 +2,10 @@ const axios = require('axios');
 
 const SPOTIFY_API_URL = 'https://api.spotify.com/v1';
 
+// Cache search results for 5 minutes to avoid 429s on repeated fetches
+const searchCache = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 async function searchSongs(query, token, limit = 10, retryMs = 0) {
   if (!token) {
     const err = new Error('Not connected to Spotify — please reconnect.');
@@ -10,6 +14,13 @@ async function searchSongs(query, token, limit = 10, retryMs = 0) {
   }
 
   if (retryMs > 0) await new Promise(r => setTimeout(r, retryMs));
+
+  const cacheKey = `${query}::${limit}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+    console.log(`📦 Cache hit: "${query}"`);
+    return cached.tracks;
+  }
 
   console.log(`🔍 Searching Spotify: "${query}" (limit=${limit})`);
 
@@ -23,6 +34,7 @@ async function searchSongs(query, token, limit = 10, retryMs = 0) {
 
     const tracks = response.data.tracks.items || [];
     console.log(`✓ Found ${tracks.length} tracks`);
+    searchCache.set(cacheKey, { tracks, ts: Date.now() });
     return tracks;
   } catch (error) {
     const status = error.response?.status;

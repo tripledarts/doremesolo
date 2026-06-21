@@ -1,46 +1,39 @@
 // Synthetic workout pace sequence — each value is one 2-second polling tick.
 // Arc: immobile → walk warmup → jogging → running → wind-down → loops.
-// BPM = step cadence (steps/min). Zones: walk 70-100, jog 100-130, run 130-160.
-// Natural variation baked in: drift, micro-surges, stumbles, rhythm shifts.
+// BPM = step cadence (steps/min). Phases flow one-directionally with slight natural drift.
 const WORKOUT_ARC = [
   // Still / just starting
-  0, 0, 0, 8, 18, 30,
+  0, 0, 0, 6, 15, 26,
 
-  // Picking up — uneven first steps
-  44, 55, 61, 58, 66, 72, 69, 75, 78,
+  // Picking up — first steps
+  38, 50, 60, 67, 72, 76, 79, 81,
 
-  // Walk settling in — rhythm finding itself
-  82, 79, 84, 81, 86, 88, 84, 87, 90, 85, 89, 91,
+  // Walk settling in
+  83, 85, 84, 87, 86, 88, 87, 90, 89, 91, 90, 92,
 
-  // Slight pace dip, then push
-  86, 83, 88, 93, 97, 94, 99, 96,
+  // Transition to jog
+  94, 97, 100, 103, 101, 105, 108, 106, 110,
 
-  // Jogging — uneven early cadence
-  102, 105, 101, 108, 104, 110, 107, 112, 109, 106,
+  // Jogging — steady rhythm with small drift
+  112, 114, 113, 115, 114, 116, 115, 117, 116, 118,
+  117, 119, 118, 120, 119, 121, 120, 122, 121, 120,
 
-  // Mid jog — rhythm clicks in, then wavers
-  115, 118, 114, 119, 116, 121, 118, 115, 120, 117,
-  123, 119, 122, 126, 121, 118, 124, 120,
+  // Push toward run
+  123, 125, 127, 129, 131, 133, 135, 137,
 
-  // Push to run — surges and settling
-  128, 132, 129, 135, 131, 138, 134, 140, 137,
+  // Running — drifts gently up and down, never more than 5 BPM from neighbours
+  139, 141, 140, 142, 141, 143, 142, 144, 143, 145,
+  144, 146, 145, 147, 146, 148, 147, 145, 146, 144,
+  145, 143, 144, 142, 143, 141, 142, 140,
 
-  // Running — natural drift up and down
-  143, 140, 146, 142, 148, 144, 150, 146, 143,
-  149, 152, 147, 144, 150, 153, 148, 145, 151,
-  147, 143, 148, 145, 141, 146, 150, 144,
+  // Wind-down — clear downward trend
+  137, 134, 131, 128, 125, 122, 119, 116, 114,
 
-  // Brief surge then backing off
-  155, 158, 153, 148, 143, 138,
+  // Walk-out — tired but steady
+  111, 108, 105, 102, 99, 96, 93, 90, 87,
 
-  // Wind-down jog — unsteady
-  133, 128, 124, 120, 116, 121, 115, 110, 107, 113,
-
-  // Walk out — tired legs, inconsistent
-  104, 99, 96, 101, 94, 89, 85, 91, 86, 81,
-
-  // Cooling — slowing unevenly
-  76, 71, 65, 58, 50, 40, 28, 14,
+  // Cooling
+  83, 78, 72, 65, 56, 45, 32, 18,
 ];
 
 let currentIndex = 0;
