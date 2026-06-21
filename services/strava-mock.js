@@ -1,105 +1,37 @@
-const fs = require('fs');
-const path = require('path');
+// Synthetic workout pace sequence — each value is one 2-second polling tick.
+// Arc: immobile → brisk walk warmup → jogging → running → wind-down → loops.
+// BPM = step cadence (steps/min). Zones: walk 70-100, jog 100-130, run 130-160.
+const WORKOUT_ARC = [
+  // Immobile / just starting (0-8s)
+  0, 0, 0, 10, 22,
+  // Picking up — slow walk warmup (10-30s)
+  38, 52, 63, 70, 76, 80, 83, 85, 86,
+  // Brisk walk (32-50s)
+  88, 90, 91, 93, 92, 94, 93, 95, 94,
+  // Jogging transition (52-66s)
+  98, 103, 108, 113, 116, 118, 120,
+  // Steady jog (68-100s)
+  122, 121, 123, 120, 124, 122, 123, 125, 121, 124, 122, 123, 125, 123, 122, 124,
+  // Picking up to run (102-116s)
+  127, 130, 134, 138, 141, 143, 145,
+  // Running (118-148s)
+  146, 148, 145, 147, 149, 146, 148, 150, 147, 146, 148, 149, 147, 148, 146,
+  // Wind-down (150-166s)
+  142, 137, 130, 124, 117, 110, 103, 96,
+  // Walk cooldown (168-180s)
+  91, 88, 85, 82, 79, 72,
+  // Brief rest before loop (182-188s)
+  55, 38, 20
+];
 
-let mockWorkoutData = null;
-const defaultPaceSequence = [100, 110, 120, 130, 140, 150, 145, 140, 135, 130, 125, 120, 115, 110, 105];
+let currentIndex = 0;
 
-// Load and parse mock data from Kaggle dataset
-function loadMockData() {
-  try {
-    const metaPath = path.join(__dirname, '../mock-data/META-DATA_1160x1.csv');
-    const spdPath = path.join(__dirname, '../mock-data/SPD-DATA_std_1160x69.csv');
-
-    if (!fs.existsSync(metaPath) || !fs.existsSync(spdPath)) {
-      console.warn('Mock data files not found. Using default pace sequence.');
-      mockWorkoutData = {
-        paceValues: defaultPaceSequence,
-        currentIndex: 0
-      };
-      return true;
-    }
-
-    const metaContent = fs.readFileSync(metaPath, 'utf-8');
-    const spdContent = fs.readFileSync(spdPath, 'utf-8');
-
-    const metaLines = metaContent.split('\n').slice(1);
-    const spdLines = spdContent.split('\n').slice(1);
-
-    // Find a Running activity
-    let runningActivityIndex = null;
-    for (let i = 0; i < metaLines.length; i++) {
-      const parts = metaLines[i].split(',');
-      if (parts[1] && parts[1].includes('Running')) {
-        runningActivityIndex = i;
-        console.log(`✓ Found Running activity at index ${i}`);
-        break;
-      }
-    }
-
-    if (runningActivityIndex === null) {
-      console.warn('No Running activity found. Using default pace sequence.');
-      mockWorkoutData = {
-        paceValues: defaultPaceSequence,
-        currentIndex: 0
-      };
-      return true;
-    }
-
-    const paceLine = spdLines[runningActivityIndex];
-    if (!paceLine) {
-      throw new Error('No pace data for this activity');
-    }
-
-    const paceValues = paceLine.split(',')
-      .map(v => {
-        const num = parseFloat(v);
-        if (isNaN(num) || num === 0) return null;
-        // SPD data is z-score standardized (not raw m/s).
-        // Map z-score range ~(-2 to +2) to BPM range ~(70-190), centered at 130.
-        const bpm = Math.max(80, Math.min(180, 130 + num * 30));
-        return bpm;
-      })
-      .filter(v => v !== null);
-
-    if (paceValues.length === 0) {
-      throw new Error('No valid pace values extracted');
-    }
-
-    const minPace = Math.min(...paceValues);
-    const maxPace = Math.max(...paceValues);
-    const avgPace = (paceValues.reduce((a, b) => a + b, 0) / paceValues.length).toFixed(0);
-
-    console.log(`✓ Loaded ${paceValues.length} pace samples (range: ${minPace.toFixed(0)}-${maxPace.toFixed(0)} BPM, avg: ${avgPace})`);
-
-    mockWorkoutData = {
-      paceValues,
-      currentIndex: 0
-    };
-
-    return true;
-  } catch (error) {
-    console.error('⚠ Error loading mock data:', error.message);
-    mockWorkoutData = {
-      paceValues: defaultPaceSequence,
-      currentIndex: 0
-    };
-    return false;
-  }
-}
-
-// Get current pace (simulates real-time polling from Strava)
 function getCurrentPace() {
-  if (!mockWorkoutData || mockWorkoutData.paceValues.length === 0) {
-    return 120;
-  }
-
-  const pace = mockWorkoutData.paceValues[mockWorkoutData.currentIndex];
-  mockWorkoutData.currentIndex = (mockWorkoutData.currentIndex + 1) % mockWorkoutData.paceValues.length;
-
-  return Math.round(Math.max(80, Math.min(180, pace)));
+  const bpm = WORKOUT_ARC[currentIndex];
+  currentIndex = (currentIndex + 1) % WORKOUT_ARC.length;
+  return bpm;
 }
 
-// Initialize on load
-loadMockData();
+console.log(`✓ Synthetic workout arc loaded: ${WORKOUT_ARC.length} samples (~${Math.round(WORKOUT_ARC.length * 2)}s per loop)`);
 
 module.exports = { getCurrentPace };
