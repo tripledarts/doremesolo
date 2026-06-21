@@ -97,12 +97,13 @@ function initSpotifyPlayer() {
   spotifyPlayer.addListener('ready', ({ device_id }) => {
     playerDeviceId = device_id;
     console.log('🎵 Spotify player ready, device:', device_id);
-    document.getElementById('connection-status').textContent = '🟢 Player ready';
+    document.getElementById('connection-status').textContent = '🟢 music, at your speed';
   });
 
   spotifyPlayer.addListener('not_ready', ({ device_id }) => {
     console.warn('⚠️ Player offline:', device_id);
     playerDeviceId = null;
+    document.getElementById('connection-status').textContent = '🔴 music is charging';
   });
 
   spotifyPlayer.addListener('player_state_changed', handlePlayerStateChange);
