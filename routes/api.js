@@ -55,7 +55,7 @@ router.get('/current-songs', async (req, res) => {
     : new Set();
 
   // How many songs to return (1 for replacements, 5 for initial load)
-  const returnLimit = Math.min(parseInt(req.query.limit) || 3, 3);
+  const returnLimit = Math.min(parseInt(req.query.limit) || 3, 12);
 
   console.log(`🎵 Matching songs: BPM=${bpmNum}, mood=${mood}, vocals=${vocals}, excluding=${exclude.size}`);
 

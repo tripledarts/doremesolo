@@ -40,6 +40,9 @@ let songPaceBuffer = [];
 // Played song IDs with timestamps — used to exclude repeats for 1 hour
 const playedSongIds = new Map(); // id → Date.now() when played
 
+// Pre-fetched song pool — drained by fetchReplacement before hitting the API
+let songPool = [];
+
 function addToPlayedIds(id) {
   if (id) playedSongIds.set(id, Date.now());
 }
@@ -294,6 +297,7 @@ function setupEventListeners() {
     } else {
       mockWorkoutActive = false;
       playlistStarted = false;
+      songPool = [];
       btn.textContent = '▶️ Start Mock Workout';
       btn.style.backgroundColor = '';
       status.textContent = 'Stopped';
@@ -326,18 +330,27 @@ function requestSongs(token, limit = 3) {
   return fetch(`/api/current-songs?${params.toString()}`);
 }
 
-// Fetch 1 replacement song and add it to the visual queue (no Spotify queue API needed —
-// we restart the context via playQueue() when the last track ends instead)
+// Fetch 1 replacement song and add it to the visual queue.
+// Drains the pre-fetched songPool first; only hits the API when the pool is empty.
 async function fetchReplacement() {
   if (pendingFetch) return;
   if (currentQueue.length >= 3) return;
+
+  // Serve from pool — zero API calls
+  if (songPool.length > 0) {
+    const next = songPool.shift();
+    console.log(`🎵 Pool → queue (${songPool.length} remaining)`);
+    currentQueue.push(next);
+    renderQueue();
+    return;
+  }
+
+  // Pool exhausted — fall back to a live API fetch
   pendingFetch = true;
-  // Snapshot sustained pace now (buffer is reset after this call returns)
   const bpmForNext = getSustainedPace(songPaceBuffer);
   try {
     const token = await getValidSpotifyToken();
     currentSpotifyToken = token;
-    // Exclude both recently-played songs AND songs already in the visible queue
     const playedIds = getExcludeParam();
     const queueIds = currentQueue.map(s => s.id).filter(Boolean).join(',');
     const allExclude = [playedIds, queueIds].filter(Boolean).join(',');
@@ -403,15 +416,15 @@ async function refreshQueueTail() {
 
 async function fetchSongs() {
   try {
-
     currentSpotifyToken = await getValidSpotifyToken();
-    let response = await requestSongs(currentSpotifyToken);
+    // Fetch a full pool of 12 upfront — first 3 go live, rest held in songPool
+    let response = await requestSongs(currentSpotifyToken, 12);
 
     if (response.status === 401) {
       const refreshed = await refreshSpotifyToken();
       if (refreshed) {
         currentSpotifyToken = refreshed;
-        response = await requestSongs(refreshed);
+        response = await requestSongs(refreshed, 12);
       }
     }
 
@@ -428,18 +441,21 @@ async function fetchSongs() {
     }
 
     const data = await response.json();
+    const all = data.songs || [];
 
-    if (surpriseMode && data.songs.length > 0) {
-      const idx = Math.floor(Math.random() * data.songs.length);
-      displaySongs([data.songs[idx]]);
+    if (surpriseMode && all.length > 0) {
+      const idx = Math.floor(Math.random() * all.length);
+      songPool = [];
+      displaySongs([all[idx]]);
       surpriseMode = false;
     } else {
-      displaySongs(data.songs);
+      songPool = all.slice(3);
+      displaySongs(all.slice(0, 3));
     }
+    console.log(`🎵 Pool loaded: ${songPool.length} songs cached for replacements`);
   } catch (error) {
     console.error('Error fetching songs:', error);
     showError('Network error: ' + esc(error.message));
-  } finally {
   }
 }
 
