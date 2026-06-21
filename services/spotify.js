@@ -34,7 +34,7 @@ async function searchSongs(query, token, limit = 10, retryMs = 0) {
       throw err;
     }
     if (status === 429 && retryMs === 0) {
-      const retryAfter = parseInt(error.response?.headers?.['retry-after'] || '2') * 1000;
+      const retryAfter = parseInt(error.response?.headers?.['retry-after'] || '10') * 1000;
       console.warn(`⏳ Rate limited — retrying in ${retryAfter}ms`);
       return searchSongs(query, token, limit, retryAfter);
     }
