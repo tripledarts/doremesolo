@@ -1,8 +1,9 @@
-// Hardcoded demo song pool — used when Spotify search API is rate-limited.
-// URIs are real Spotify tracks; playback still goes through the Spotify SDK.
-// Covers happy (majority) and chill moods as requested for the demo.
+// Curated demo pool — 12 songs tagged by mood and vocals.
+// Served when Spotify search is rate-limited. Playback still uses the Spotify SDK.
+// Distribution: 6 happy / 6 chill  ×  voice / voiceless / combo (2 each).
 
 const DEMO_SONGS = [
+  // ── HAPPY + VOICED ────────────────────────────────────────────────────────
   {
     id: '60nZcImufyMA1MKQY3dcCH',
     name: 'Happy',
@@ -11,8 +12,8 @@ const DEMO_SONGS = [
     spotify_url: 'https://open.spotify.com/track/60nZcImufyMA1MKQY3dcCH',
     image_url: null,
     reason: 'The definition of happy — pure upbeat energy',
-    match_score: 98,
-    tempo: 160
+    match_score: 98, tempo: 160,
+    mood: 'happy', vocals: 'voiced'
   },
   {
     id: '1WkMMavIMc4JZ8cfMmxHkI',
@@ -22,8 +23,8 @@ const DEMO_SONGS = [
     spotify_url: 'https://open.spotify.com/track/1WkMMavIMc4JZ8cfMmxHkI',
     image_url: null,
     reason: 'Irresistibly happy groove — perfect running energy',
-    match_score: 96,
-    tempo: 113
+    match_score: 96, tempo: 113,
+    mood: 'happy', vocals: 'voiced'
   },
   {
     id: '463CkQjx2Zk1yXoBuierM9',
@@ -32,10 +33,12 @@ const DEMO_SONGS = [
     uri: 'spotify:track:463CkQjx2Zk1yXoBuierM9',
     spotify_url: 'https://open.spotify.com/track/463CkQjx2Zk1yXoBuierM9',
     image_url: null,
-    reason: 'Disco-pop bounce — floats you through your run',
-    match_score: 94,
-    tempo: 103
+    reason: 'Disco-pop bounce matched to your stride',
+    match_score: 94, tempo: 103,
+    mood: 'happy', vocals: 'voiced'
   },
+
+  // ── HAPPY + VOICELESS ─────────────────────────────────────────────────────
   {
     id: '0VjIjW4GlUZAMYd2vXMi3b',
     name: 'Blinding Lights',
@@ -43,9 +46,9 @@ const DEMO_SONGS = [
     uri: 'spotify:track:0VjIjW4GlUZAMYd2vXMi3b',
     spotify_url: 'https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b',
     image_url: null,
-    reason: 'Driving synth energy — paces you without thinking',
-    match_score: 92,
-    tempo: 171
+    reason: 'Driving synth wall — propels you without thinking',
+    match_score: 92, tempo: 171,
+    mood: 'happy', vocals: 'voiceless'
   },
   {
     id: '7qiZfU4dY1lWllzX7mPBI3',
@@ -54,32 +57,12 @@ const DEMO_SONGS = [
     uri: 'spotify:track:7qiZfU4dY1lWllzX7mPBI3',
     spotify_url: 'https://open.spotify.com/track/7qiZfU4dY1lWllzX7mPBI3',
     image_url: null,
-    reason: 'Catchy and upbeat — keeps the mood light',
-    match_score: 90,
-    tempo: 96
+    reason: 'Pulsing beat keeps your pace locked in',
+    match_score: 90, tempo: 96,
+    mood: 'happy', vocals: 'voiceless'
   },
-  {
-    id: '6UelLqGlWMcVH1E5c4H7lY',
-    name: 'Watermelon Sugar',
-    artist: 'Harry Styles',
-    uri: 'spotify:track:6UelLqGlWMcVH1E5c4H7lY',
-    spotify_url: 'https://open.spotify.com/track/6UelLqGlWMcVH1E5c4H7lY',
-    image_url: null,
-    reason: 'Breezy happy-pop — summer run vibes',
-    match_score: 89,
-    tempo: 95
-  },
-  {
-    id: '3KkXRkHbMCARz0aVfEt68P',
-    name: 'Sunflower',
-    artist: 'Post Malone & Swae Lee',
-    uri: 'spotify:track:3KkXRkHbMCARz0aVfEt68P',
-    spotify_url: 'https://open.spotify.com/track/3KkXRkHbMCARz0aVfEt68P',
-    image_url: null,
-    reason: 'Chill melodic flow — easy stride music',
-    match_score: 88,
-    tempo: 90
-  },
+
+  // ── HAPPY + COMBO ─────────────────────────────────────────────────────────
   {
     id: '3PfIrDoz19wz7qK7tYeu62',
     name: "Don't Start Now",
@@ -87,42 +70,9 @@ const DEMO_SONGS = [
     uri: 'spotify:track:3PfIrDoz19wz7qK7tYeu62',
     spotify_url: 'https://open.spotify.com/track/3PfIrDoz19wz7qK7tYeu62',
     image_url: null,
-    reason: 'Funky disco-pop energy — gets the legs moving',
-    match_score: 87,
-    tempo: 124
-  },
-  {
-    id: '4LRPiXqCikLlN15c3yImP7',
-    name: 'As It Was',
-    artist: 'Harry Styles',
-    uri: 'spotify:track:4LRPiXqCikLlN15c3yImP7',
-    spotify_url: 'https://open.spotify.com/track/4LRPiXqCikLlN15c3yImP7',
-    image_url: null,
-    reason: 'Upbeat melancholy — chill but keeps you moving',
-    match_score: 86,
-    tempo: 174
-  },
-  {
-    id: '4ZtFanR9U6ndgddUvNcjcG',
-    name: 'good 4 u',
-    artist: 'Olivia Rodrigo',
-    uri: 'spotify:track:4ZtFanR9U6ndgddUvNcjcG',
-    spotify_url: 'https://open.spotify.com/track/4ZtFanR9U6ndgddUvNcjcG',
-    image_url: null,
-    reason: 'High-energy pop-punk — great for picking up pace',
-    match_score: 85,
-    tempo: 166
-  },
-  {
-    id: '4iJyoBOLtHqaWYs3vyWFJl',
-    name: 'Peaches',
-    artist: 'Justin Bieber',
-    uri: 'spotify:track:4iJyoBOLtHqaWYs3vyWFJl',
-    spotify_url: 'https://open.spotify.com/track/4iJyoBOLtHqaWYs3vyWFJl',
-    image_url: null,
-    reason: 'Smooth chill R&B — keeps it easy and flowing',
-    match_score: 84,
-    tempo: 90
+    reason: 'Funky disco energy — keeps the legs going',
+    match_score: 91, tempo: 124,
+    mood: 'happy', vocals: 'combo'
   },
   {
     id: '5HCyWlXZPP0y6Gqq8TgA20',
@@ -132,13 +82,90 @@ const DEMO_SONGS = [
     spotify_url: 'https://open.spotify.com/track/5HCyWlXZPP0y6Gqq8TgA20',
     image_url: null,
     reason: 'High-energy pop — propels you forward',
-    match_score: 83,
-    tempo: 170
+    match_score: 88, tempo: 170,
+    mood: 'happy', vocals: 'combo'
+  },
+
+  // ── CHILL + VOICED ────────────────────────────────────────────────────────
+  {
+    id: '3KkXRkHbMCARz0aVfEt68P',
+    name: 'Sunflower',
+    artist: 'Post Malone & Swae Lee',
+    uri: 'spotify:track:3KkXRkHbMCARz0aVfEt68P',
+    spotify_url: 'https://open.spotify.com/track/3KkXRkHbMCARz0aVfEt68P',
+    image_url: null,
+    reason: 'Smooth melodic flow — easy stride music',
+    match_score: 89, tempo: 90,
+    mood: 'chill', vocals: 'voiced'
+  },
+  {
+    id: '4iJyoBOLtHqaWYs3vyWFJl',
+    name: 'Peaches',
+    artist: 'Justin Bieber',
+    uri: 'spotify:track:4iJyoBOLtHqaWYs3vyWFJl',
+    spotify_url: 'https://open.spotify.com/track/4iJyoBOLtHqaWYs3vyWFJl',
+    image_url: null,
+    reason: 'Silky R&B groove — keeps it easy and flowing',
+    match_score: 87, tempo: 90,
+    mood: 'chill', vocals: 'voiced'
+  },
+
+  // ── CHILL + VOICELESS ─────────────────────────────────────────────────────
+  {
+    id: '6UelLqGlWMcVH1E5c4H7lY',
+    name: 'Watermelon Sugar',
+    artist: 'Harry Styles',
+    uri: 'spotify:track:6UelLqGlWMcVH1E5c4H7lY',
+    spotify_url: 'https://open.spotify.com/track/6UelLqGlWMcVH1E5c4H7lY',
+    image_url: null,
+    reason: 'Breezy summer groove — light and unhurried',
+    match_score: 86, tempo: 95,
+    mood: 'chill', vocals: 'voiceless'
+  },
+  {
+    id: '4LRPiXqCikLlN15c3yImP7',
+    name: 'As It Was',
+    artist: 'Harry Styles',
+    uri: 'spotify:track:4LRPiXqCikLlN15c3yImP7',
+    spotify_url: 'https://open.spotify.com/track/4LRPiXqCikLlN15c3yImP7',
+    image_url: null,
+    reason: 'Airy synth-pop — chill but keeps you moving',
+    match_score: 85, tempo: 174,
+    mood: 'chill', vocals: 'voiceless'
+  },
+
+  // ── CHILL + COMBO ─────────────────────────────────────────────────────────
+  {
+    id: '4ZtFanR9U6ndgddUvNcjcG',
+    name: 'good 4 u',
+    artist: 'Olivia Rodrigo',
+    uri: 'spotify:track:4ZtFanR9U6ndgddUvNcjcG',
+    spotify_url: 'https://open.spotify.com/track/4ZtFanR9U6ndgddUvNcjcG',
+    image_url: null,
+    reason: 'Punchy energy with a chill-out release — best of both',
+    match_score: 84, tempo: 166,
+    mood: 'chill', vocals: 'combo'
   }
 ];
 
-function getDemoSongs(limit = 3, excludeIds = new Set()) {
+// Returns up to `limit` songs filtered by mood and vocals, excluding played IDs.
+// Falls back to the full pool if the filtered set is too small.
+function getDemoSongs(limit = 3, excludeIds = new Set(), mood = null, vocals = null) {
   const available = DEMO_SONGS.filter(s => !excludeIds.has(s.id));
+
+  if (mood || vocals) {
+    const filtered = available.filter(s =>
+      (!mood   || s.mood   === mood)   &&
+      (!vocals || s.vocals === vocals)
+    );
+    // If we have enough filtered songs, use them; otherwise fall back to full pool
+    if (filtered.length >= limit) return filtered.slice(0, limit);
+    // Pad with songs from the full pool not already included
+    const filteredIds = new Set(filtered.map(s => s.id));
+    const extras = available.filter(s => !filteredIds.has(s.id));
+    return [...filtered, ...extras].slice(0, limit);
+  }
+
   return available.slice(0, limit);
 }
 

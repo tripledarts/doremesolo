@@ -66,7 +66,7 @@ router.get('/current-songs', async (req, res) => {
     if (sessionState.spotifyRateLimitedUntil > Date.now()) {
       const remaining = Math.ceil((sessionState.spotifyRateLimitedUntil - Date.now()) / 1000);
       console.log(`⚠️ Spotify rate-limited for ${remaining}s more — serving demo songs`);
-      const songs = getDemoSongs(returnLimit, exclude);
+      const songs = getDemoSongs(returnLimit, exclude, mood, vocals);
       return res.json({ songs, source: 'demo' });
     }
 
@@ -86,7 +86,7 @@ router.get('/current-songs', async (req, res) => {
       if (searchErr.retryAfter) {
         sessionState.spotifyRateLimitedUntil = Date.now() + searchErr.retryAfter * 1000;
         console.log(`⚠️ Spotify 429 — falling back to demo songs for ${searchErr.retryAfter}s`);
-        const songs = getDemoSongs(returnLimit, exclude);
+        const songs = getDemoSongs(returnLimit, exclude, mood, vocals);
         return res.json({ songs, source: 'demo' });
       }
       throw searchErr;
@@ -185,7 +185,8 @@ router.get('/demo-songs', (req, res) => {
   const exclude = req.query.exclude
     ? new Set(req.query.exclude.split(',').filter(Boolean))
     : new Set();
-  res.json({ songs: getDemoSongs(limit, exclude), source: 'demo' });
+  const { mood, vocals } = req.query;
+  res.json({ songs: getDemoSongs(limit, exclude, mood || null, vocals || null), source: 'demo' });
 });
 
 // GET /api/mock-pace
