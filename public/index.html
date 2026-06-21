@@ -4,21 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DoReMeSoLo - Music Powered by Your Pace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="container">
     <!-- Header -->
     <header>
-      <h1>🎵 DoReMeSoLo</h1>
-      <p>Music powered by your pace</p>
-      <div id="auth-status">
-        <span id="user-info">Not logged in</span>
-        <button id="spotify-login-btn" class="btn">Login with Spotify</button>
+      <div class="header-brand">
+        <h1>DoReMeSoLo</h1>
+        <p>Music powered by your pace</p>
       </div>
-      <div id="user-connected" style="display:none;">
-        <span id="user-connected-info">✓ Connected</span>
-        <button id="spotify-logout-btn" class="btn btn-secondary">Logout</button>
+      <div class="header-actions">
+        <div id="auth-status">
+          <button id="spotify-login-btn" class="btn btn-primary">Connect Spotify</button>
+        </div>
+        <div id="user-connected" style="display:none;">
+          <span id="user-connected-info">● Connected</span>
+          <button id="spotify-logout-btn" class="btn btn-secondary">Sign out</button>
+        </div>
       </div>
     </header>
 
