@@ -2,11 +2,13 @@ const express = require('express');
 const { searchSongs, getBatchAudioFeatures } = require('../services/spotify');
 const { rankSongsByMood } = require('../services/gemini');
 const { getCurrentPace } = require('../services/strava-mock');
+const { getDemoSongs } = require('../services/demo-songs');
 const router = express.Router();
 
 // In-memory session state — recently played stores full song objects
 const sessionState = {
-  recentlyPlayed: []
+  recentlyPlayed: [],
+  spotifyRateLimitedUntil: 0  // epoch ms; if > Date.now(), skip Spotify search
 };
 
 // Pace zone → Spotify genre seeds — 6 bands matched to typical song BPM ranges
@@ -60,6 +62,14 @@ router.get('/current-songs', async (req, res) => {
   console.log(`🎵 Matching songs: BPM=${bpmNum}, mood=${mood}, vocals=${vocals}, excluding=${exclude.size}`);
 
   try {
+    // If Spotify search is rate-limited, serve from the hardcoded demo pool immediately
+    if (sessionState.spotifyRateLimitedUntil > Date.now()) {
+      const remaining = Math.ceil((sessionState.spotifyRateLimitedUntil - Date.now()) / 1000);
+      console.log(`⚠️ Spotify rate-limited for ${remaining}s more — serving demo songs`);
+      const songs = getDemoSongs(returnLimit, exclude);
+      return res.json({ songs, source: 'demo' });
+    }
+
     const zone = getPaceZone(bpmNum);
 
     // Build the search query — append "instrumental" for voiceless preference so Spotify
@@ -69,7 +79,18 @@ router.get('/current-songs', async (req, res) => {
 
     // Single search combining genres as keywords — avoids parallel calls that burn rate limit
     const genreKeywords = zone.genres.join(' ');
-    const tracks = await searchSongs(`${genreKeywords} ${queryBase}`, token, 12);
+    let tracks;
+    try {
+      tracks = await searchSongs(`${genreKeywords} ${queryBase}`, token, 12);
+    } catch (searchErr) {
+      if (searchErr.retryAfter) {
+        sessionState.spotifyRateLimitedUntil = Date.now() + searchErr.retryAfter * 1000;
+        console.log(`⚠️ Spotify 429 — falling back to demo songs for ${searchErr.retryAfter}s`);
+        const songs = getDemoSongs(returnLimit, exclude);
+        return res.json({ songs, source: 'demo' });
+      }
+      throw searchErr;
+    }
 
     const seen = new Set();
     const spotifySongs = tracks.filter(track => {
@@ -156,6 +177,15 @@ router.post('/song-played', (req, res) => {
   }
 
   res.json({ recentlyPlayed: sessionState.recentlyPlayed });
+});
+
+// GET /api/demo-songs — returns hardcoded demo pool directly (no Spotify API call)
+router.get('/demo-songs', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 3, 12);
+  const exclude = req.query.exclude
+    ? new Set(req.query.exclude.split(',').filter(Boolean))
+    : new Set();
+  res.json({ songs: getDemoSongs(limit, exclude), source: 'demo' });
 });
 
 // GET /api/mock-pace

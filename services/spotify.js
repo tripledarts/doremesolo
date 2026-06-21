@@ -6,14 +6,12 @@ const SPOTIFY_API_URL = 'https://api.spotify.com/v1';
 const searchCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-async function searchSongs(query, token, limit = 10, retryMs = 0) {
+async function searchSongs(query, token, limit = 10) {
   if (!token) {
     const err = new Error('Not connected to Spotify — please reconnect.');
     err.code = 'SPOTIFY_AUTH';
     throw err;
   }
-
-  if (retryMs > 0) await new Promise(r => setTimeout(r, retryMs));
 
   const cacheKey = `${query}::${limit}`;
   const cached = searchCache.get(cacheKey);
@@ -45,10 +43,13 @@ async function searchSongs(query, token, limit = 10, retryMs = 0) {
       err.status = status;
       throw err;
     }
-    if (status === 429 && retryMs === 0) {
-      const retryAfter = parseInt(error.response?.headers?.['retry-after'] || '10') * 1000;
-      console.warn(`⏳ Rate limited — retrying in ${retryAfter}ms`);
-      return searchSongs(query, token, limit, retryAfter);
+    if (status === 429) {
+      const retryAfter = parseInt(error.response?.headers?.['retry-after'] || '10');
+      console.warn(`⏳ Rate limited — Retry-After: ${retryAfter}s`);
+      const err = new Error(`Spotify rate limited for ${retryAfter}s`);
+      err.code = 'SPOTIFY_RATE_LIMIT';
+      err.retryAfter = retryAfter;
+      throw err;
     }
     console.error(`❌ Spotify search error ${status}:`, JSON.stringify(error.response?.data || error.message));
     return [];
