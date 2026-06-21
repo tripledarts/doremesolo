@@ -226,6 +226,12 @@ main {
   border-bottom: none;
 }
 
+.rate-limit-note {
+  font-size: 0.75rem;
+  color: #aaa;
+  margin: 0 0 8px 0;
+}
+
 .placeholder {
   color: #999;
   font-style: italic;

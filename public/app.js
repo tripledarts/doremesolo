@@ -558,21 +558,22 @@ function simulatePaceUpdates() {
       if (!data.pace || data.pace <= 0) return;
 
       currentPace = data.pace;
-      document.getElementById('pace-display').textContent = currentPace;
-
       const elapsed = Date.now() - workoutStartTime;
 
       if (!playlistStarted && elapsed < 6000) {
         paceReadings.push(currentPace);
-        document.getElementById('workout-status').textContent =
-          `🔴 Collecting pace... ${Math.floor(elapsed / 1000)}s`;
+        const secondsElapsed = Math.min(6, Math.floor(elapsed / 1000) + 1);
+        document.getElementById('pace-display').textContent = secondsElapsed;
+        document.getElementById('pace-label').textContent = 'sec';
+        document.getElementById('workout-status').textContent = '🔴 Collecting pace...';
 
       } else if (!playlistStarted && elapsed >= 6000) {
-        const avgPace = Math.round(
-          paceReadings.reduce((a, b) => a + b, 0) / paceReadings.length
-        );
-        currentPace = avgPace;
+        const active = paceReadings.filter(p => p > 0);
+        currentPace = active.length > 0
+          ? Math.round(active.reduce((a, b) => a + b, 0) / active.length)
+          : 100;
         document.getElementById('pace-display').textContent = currentPace;
+        document.getElementById('pace-label').textContent = 'BPM';
         document.getElementById('workout-status').textContent = '🟢 Playing';
         playlistStarted = true;
         paceReadings = [];
