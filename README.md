@@ -19,7 +19,7 @@ DoReMeSoLo reads your live pace from your fitness tracker, maps it to a musical 
 
 ## Demo
 
-**[Watch the demo video →](#)** *(link to be added)*
+**[Watch the demo video →](https://drive.google.com/file/d/1hTezsL8HKzeUyWVykdQikqFRgq87P3PA/view?usp=sharing)**
 
 ## Tech Stack
 
