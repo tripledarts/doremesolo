@@ -318,7 +318,7 @@ function setupEventListeners() {
 
 // ─── Song fetching ───────────────────────────────────────────────────────────
 
-function requestSongs(token, limit = 5) {
+function requestSongs(token, limit = 3) {
   const exclude = getExcludeParam();
   const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit });
   if (exclude) params.set('exclude', exclude);
@@ -329,7 +329,7 @@ function requestSongs(token, limit = 5) {
 // we restart the context via playQueue() when the last track ends instead)
 async function fetchReplacement() {
   if (pendingFetch) return;
-  if (currentQueue.length >= 5) return;
+  if (currentQueue.length >= 3) return;
   pendingFetch = true;
   // Snapshot sustained pace now (buffer is reset after this call returns)
   const bpmForNext = getSustainedPace(songPaceBuffer);
@@ -367,7 +367,7 @@ async function refreshQueueTail() {
     const playedIds = getExcludeParam();
     const keepId = currentQueue[0]?.id;
     const allExclude = [playedIds, keepId].filter(Boolean).join(',');
-    const params = new URLSearchParams({ bpm: getSustainedPace(songPaceBuffer), mood: currentMood, vocals: currentVocals, token, limit: 4 });
+    const params = new URLSearchParams({ bpm: getSustainedPace(songPaceBuffer), mood: currentMood, vocals: currentVocals, token, limit: 2 });
     if (allExclude) params.set('exclude', allExclude);
     const res = await fetch(`/api/current-songs?${params.toString()}`);
     if (!res.ok) return;

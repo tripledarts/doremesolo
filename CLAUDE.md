@@ -66,11 +66,11 @@ mock-data/         Kaggle "Sport Activity Dataset - MTS-5" CSVs (committed, not 
 Design intent: NO manual BPM input — pace is driven entirely by mock data and shown as a large changing BPM number.
 - **No "Get Songs" button** — removed. Songs auto-fetch after pace collection completes.
 - On "Start Mock Workout": collect pace readings for **6 seconds**, compute average, then auto-fetch songs.
-- Once playlist starts, the Spotify SDK plays through the 5-song queue automatically. As each song is played, `fetchReplacement()` adds a new song to keep the queue at 5.
+- Once playlist starts, the Spotify SDK plays through the 3-song queue automatically. As each song is played, `fetchReplacement()` adds a new song to keep the queue at 3.
 - Pace polled every 2s from `/api/mock-pace`.
-- **Mood / vocals change mid-workout:** `refreshQueueTail()` keeps song 1 (currently playing), replaces songs 2–5 with new preference-matched songs and reloads the Spotify context at the current playback position so there's no audible skip.
+- **Mood / vocals change mid-workout:** `refreshQueueTail()` keeps song 1 (currently playing), replaces songs 2–3 with new preference-matched songs and reloads the Spotify context at the current playback position so there's no audible skip.
 - **Surprise Me button:** picks a random genre from a 45-genre list (`SURPRISE_GENRES` in `app.js`), stores it in `surpriseGenre`, and calls `fetchSongs()`. The genre is locked for the session; subsequent replacements use the same genre. `surpriseGenre` is cleared when the workout stops. **Note: backend does not yet use `surprise_genre` param** — previous attempts to wire it up were reverted due to bugs. Currently Surprise Me fetches songs using the normal pace-zone genres and the old `surpriseMode` branch in `fetchSongs` picks one random song from the result.
-- Queue is always capped at 5 songs.
+- Queue is always capped at 3 songs.
 - Recently Played: displayed capped at 5; full list kept in `playedSongIds` Map (id → timestamp) for 1-hour exclusion from future fetches.
 
 ## Spotify Web Playback SDK (`public/app.js`)

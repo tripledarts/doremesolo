@@ -55,7 +55,7 @@ router.get('/current-songs', async (req, res) => {
     : new Set();
 
   // How many songs to return (1 for replacements, 5 for initial load)
-  const returnLimit = Math.min(parseInt(req.query.limit) || 5, 5);
+  const returnLimit = Math.min(parseInt(req.query.limit) || 3, 3);
 
   console.log(`🎵 Matching songs: BPM=${bpmNum}, mood=${mood}, vocals=${vocals}, excluding=${exclude.size}`);
 
@@ -69,7 +69,7 @@ router.get('/current-songs', async (req, res) => {
 
     // Single search combining genres as keywords — avoids parallel calls that burn rate limit
     const genreKeywords = zone.genres.join(' ');
-    const tracks = await searchSongs(`${genreKeywords} ${queryBase}`, token, 15);
+    const tracks = await searchSongs(`${genreKeywords} ${queryBase}`, token, 12);
 
     const seen = new Set();
     const spotifySongs = tracks.filter(track => {
