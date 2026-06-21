@@ -9,11 +9,14 @@ const sessionState = {
   recentlyPlayed: []
 };
 
-// Pace zone → Spotify genre seeds (Option B)
+// Pace zone → Spotify genre seeds — 6 bands matched to typical song BPM ranges
 const PACE_ZONES = [
-  { max: 94,       genres: ['hip-hop', 'r-n-b'] },
-  { max: 108,      genres: ['pop', 'indie-pop', 'disco'] },
-  { max: Infinity, genres: ['rock', 'dance', 'electronic'] }
+  { max: 60,       genres: ['ambient', 'acoustic'] },
+  { max: 80,       genres: ['soul', 'r-n-b', 'blues'] },
+  { max: 95,       genres: ['hip-hop', 'reggae', 'funk'] },
+  { max: 115,      genres: ['pop', 'indie-pop', 'disco'] },
+  { max: 135,      genres: ['dance', 'electronic', 'house'] },
+  { max: Infinity, genres: ['rock', 'drum-and-bass', 'techno'] }
 ];
 
 // Mood → Spotify audio feature targets (used by Option A)

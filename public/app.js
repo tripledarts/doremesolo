@@ -34,11 +34,28 @@ let lastSongPlaying = false;       // true when we're on the final track in the 
 let pendingFetch = false;          // prevents double auto-fetch
 let justRestartedContext = false;  // prevents double-restart after context transition
 
+// Pace readings collected during the current song — used to find sustained pace
+let songPaceBuffer = [];
+
 // Played song IDs with timestamps — used to exclude repeats for 1 hour
 const playedSongIds = new Map(); // id → Date.now() when played
 
 function addToPlayedIds(id) {
   if (id) playedSongIds.set(id, Date.now());
+}
+
+// Returns the pace that was held longest during the current song.
+// Groups readings into 5-BPM buckets; the fullest bucket wins.
+// Falls back to currentPace if the buffer is empty.
+function getSustainedPace(buffer) {
+  const active = (buffer || []).filter(p => p > 30);
+  if (!active.length) return currentPace;
+  const buckets = {};
+  active.forEach(p => {
+    const b = Math.round(p / 5) * 5;
+    buckets[b] = (buckets[b] || 0) + 1;
+  });
+  return parseInt(Object.entries(buckets).sort((a, b) => b[1] - a[1])[0][0]);
 }
 
 // Returns comma-separated IDs played within the last hour
@@ -121,6 +138,7 @@ function handlePlayerStateChange(state) {
     removeSongFromQueue(lastPlayedTrack.id);
     fetchReplacement();
     lastSongPlaying = false;
+    songPaceBuffer = [];
 
     // If the previous song was the last in Spotify's context and the user pressed Next
     // (causing Spotify to loop back), restart with our pre-fetched queue instead
@@ -313,6 +331,8 @@ async function fetchReplacement() {
   if (pendingFetch) return;
   if (currentQueue.length >= 5) return;
   pendingFetch = true;
+  // Snapshot sustained pace now (buffer is reset after this call returns)
+  const bpmForNext = getSustainedPace(songPaceBuffer);
   try {
     const token = await getValidSpotifyToken();
     currentSpotifyToken = token;
@@ -320,7 +340,7 @@ async function fetchReplacement() {
     const playedIds = getExcludeParam();
     const queueIds = currentQueue.map(s => s.id).filter(Boolean).join(',');
     const allExclude = [playedIds, queueIds].filter(Boolean).join(',');
-    const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit: 1 });
+    const params = new URLSearchParams({ bpm: bpmForNext, mood: currentMood, vocals: currentVocals, token, limit: 1 });
     if (allExclude) params.set('exclude', allExclude);
     const res = await fetch(`/api/current-songs?${params.toString()}`);
     if (!res.ok) return;
@@ -347,7 +367,7 @@ async function refreshQueueTail() {
     const playedIds = getExcludeParam();
     const keepId = currentQueue[0]?.id;
     const allExclude = [playedIds, keepId].filter(Boolean).join(',');
-    const params = new URLSearchParams({ bpm: currentPace, mood: currentMood, vocals: currentVocals, token, limit: 4 });
+    const params = new URLSearchParams({ bpm: getSustainedPace(songPaceBuffer), mood: currentMood, vocals: currentVocals, token, limit: 4 });
     if (allExclude) params.set('exclude', allExclude);
     const res = await fetch(`/api/current-songs?${params.toString()}`);
     if (!res.ok) return;
@@ -558,8 +578,10 @@ function simulatePaceUpdates() {
         paceReadings = [];
         fetchSongs();
       }
-      // Once playlist started, Spotify SDK handles queue advancement automatically.
-      // BPM display keeps updating so the user sees live pace.
+      // Once playlist started, feed pace buffer and keep display live.
+      if (playlistStarted && currentPace > 0) {
+        songPaceBuffer.push(currentPace);
+      }
     })
     .catch(err => console.error('Pace update error:', err));
 }

@@ -8,17 +8,19 @@ async function rankSongsByMood(songs, userBPM, userMood, userVocals) {
     .map(s => `${s.name} by ${s.artists[0].name} (ID: ${s.id})`)
     .join('\n');
 
-  const prompt = `You are a music curator. The user is exercising at ${userBPM} BPM with mood "${userMood}". They prefer ${userVocals} vocals.
+  const halfTime = Math.round(userBPM / 2);
+  const doubleTime = userBPM * 2;
+  const prompt = `You are a music curator for a workout app. The user has been sustaining a pace of ${userBPM} BPM. Mood: "${userMood}". Vocals: ${userVocals}.
 
-Rank these songs from best to worst match:
+Rank these songs best to worst for this exact moment:
 ${songList}
 
-Return a JSON array with:
-[
-  { track_id: "spotify_id", reason: "1-sentence why it matches", match_score: 0-100 }
-]
+Use your knowledge of each song's actual tempo. Prioritise songs whose tempo is close to ${userBPM} BPM, or harmonically related (half-time ~${halfTime} BPM, double-time ~${doubleTime} BPM). A song that matches pace AND mood scores highest.
 
-Be strict: only highly relevant matches score >70. Respond ONLY with valid JSON, no other text.`;
+Return a JSON array:
+[{ "track_id": "spotify_id", "reason": "1-sentence why it fits this pace and mood", "match_score": 0-100 }]
+
+Only scores >70 for strong matches. Respond ONLY with valid JSON, no other text.`;
 
   try {
     const response = await axios.post(
