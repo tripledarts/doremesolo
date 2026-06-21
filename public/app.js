@@ -558,12 +558,9 @@ function simulatePaceUpdates() {
       const elapsed = Date.now() - workoutStartTime;
 
       if (!playlistStarted && elapsed < 6000) {
-        // Count-up runs regardless of pace value (sequence starts at 0)
         if (data.pace > 0) paceReadings.push(data.pace);
-        const secondsElapsed = Math.min(6, Math.floor(elapsed / 1000) + 1);
-        document.getElementById('pace-display').textContent = secondsElapsed;
-        document.getElementById('pace-label').textContent = 'sec';
-        document.getElementById('workout-status').textContent = '🔴 Collecting pace...';
+        const secondsElapsed = Math.min(6, Math.floor(elapsed / 1000) * 2);
+        document.getElementById('workout-status').textContent = `🔴 Collecting pace data (${secondsElapsed}s)...`;
         return;
       }
 
@@ -576,7 +573,6 @@ function simulatePaceUpdates() {
           ? Math.round(active.reduce((a, b) => a + b, 0) / active.length)
           : 100;
         document.getElementById('pace-display').textContent = currentPace;
-        document.getElementById('pace-label').textContent = 'BPM';
         document.getElementById('workout-status').textContent = '🟢 Playing';
         playlistStarted = true;
         paceReadings = [];
@@ -584,7 +580,6 @@ function simulatePaceUpdates() {
       } else if (playlistStarted) {
         // Keep BPM display live and feed sustained pace buffer
         document.getElementById('pace-display').textContent = currentPace;
-        document.getElementById('pace-label').textContent = 'BPM';
         songPaceBuffer.push(currentPace);
       }
     })
