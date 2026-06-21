@@ -2,12 +2,14 @@ const axios = require('axios');
 
 const SPOTIFY_API_URL = 'https://api.spotify.com/v1';
 
-async function searchSongs(query, token, limit = 10) {
+async function searchSongs(query, token, limit = 10, retryMs = 0) {
   if (!token) {
     const err = new Error('Not connected to Spotify — please reconnect.');
     err.code = 'SPOTIFY_AUTH';
     throw err;
   }
+
+  if (retryMs > 0) await new Promise(r => setTimeout(r, retryMs));
 
   console.log(`🔍 Searching Spotify: "${query}" (limit=${limit})`);
 
@@ -31,7 +33,11 @@ async function searchSongs(query, token, limit = 10) {
       err.status = status;
       throw err;
     }
-    // Log full error body so we can see exactly what Spotify says
+    if (status === 429 && retryMs === 0) {
+      const retryAfter = parseInt(error.response?.headers?.['retry-after'] || '2') * 1000;
+      console.warn(`⏳ Rate limited — retrying in ${retryAfter}ms`);
+      return searchSongs(query, token, limit, retryAfter);
+    }
     console.error(`❌ Spotify search error ${status}:`, JSON.stringify(error.response?.data || error.message));
     return [];
   }
