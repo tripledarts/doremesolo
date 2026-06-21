@@ -67,14 +67,12 @@ router.get('/current-songs', async (req, res) => {
     const vocalsKeyword = vocals === 'voiceless' ? ' instrumental' : '';
     const queryBase = `${mood}${vocalsKeyword}`;
 
-    // Search once per genre seed and merge results (Spotify /recommendations is unavailable
-    // without extended quota approval, so we use genre-tagged search queries instead)
-    const searches = await Promise.all(
-      zone.genres.map(genre => searchSongs(`genre:${genre} ${queryBase}`, token, 10))
-    );
+    // Single search combining genres as keywords — avoids parallel calls that burn rate limit
+    const genreKeywords = zone.genres.join(' ');
+    const tracks = await searchSongs(`${genreKeywords} ${queryBase}`, token, 15);
 
     const seen = new Set();
-    const spotifySongs = searches.flat().filter(track => {
+    const spotifySongs = tracks.filter(track => {
       if (!track?.id || seen.has(track.id) || exclude.has(track.id)) return false;
       seen.add(track.id);
       return true;
